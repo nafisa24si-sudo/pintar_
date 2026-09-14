@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  font-family: 'Manrope', sans-serif;
+  color: #24332d;
+  background: #f5f7f2;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+
+@keyframes dashboard-card-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dashboard-card { animation: dashboard-card-enter 420ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-card { animation: none; }
+}
+
+@media print {
+  @page { margin: 10mm; size: portrait; }
+  body { background: white !important; }
+  header, footer, nav, button, #kontak, .print\:hidden { display: none !important; }
+  main { background: white !important; }
+  section { padding: 0 !important; margin: 0 !important; }
+}
