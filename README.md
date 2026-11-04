@@ -1,16 +1,20 @@
-# React + Vite
+# PINTAR
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplikasi pendataan dan administrasi peserta magang berbasis React, Vite, dan Tailwind CSS.
 
-Currently, two official plugins are available:
+## Menjalankan aplikasi
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+Pemindaian QR memerlukan izin kamera browser dan koneksi aman (HTTPS atau `localhost`). Pendaftaran dapat dibuka lewat tombol di beranda atau QR pendaftaran.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Absensi QR
 
-## Expanding the Oxlint configuration
+Admin membuka menu **Absensi**, lalu memilih **Scan QR**, **Riwayat Absensi**, atau **Rekap Absensi**. ID Card menampilkan QR yang berisi kode peserta, bukan data pribadi. QR dicocokkan dengan daftar peserta tersimpan, dan admin mengonfirmasi catatan setelah melihat identitas yang ditemukan. Kode peserta dapat dimasukkan manual saat kamera tidak tersedia.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Catatan absensi disimpan pada `localStorage` browser dengan key `pintar-attendance`. Data hanya tersedia di browser/perangkat yang menyimpannya dan tidak tersinkronisasi antarperangkat. Jenis catatan saat ini hanya kehadiran harian; aturan jam masuk/pulang, keterlambatan, izin, dan sakit belum ditentukan.
+
+Pemindaian QR bukan bukti identitas orang yang memegang kartu. Selfie tidak diwajibkan dan metode/aturan verifikasi identitas masih perlu dikonfirmasi. Jangan menggunakan pencatatan lokal ini sebagai satu-satunya kontrol kehadiran sebelum kebijakan verifikasi dan penyimpanan bersama ditetapkan.

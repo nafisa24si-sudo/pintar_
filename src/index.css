@@ -1,10 +1,26 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+@theme {
+  --text-xs: 0.7rem;
+  --text-sm: 0.82rem;
+  --text-base: 0.94rem;
+  --text-lg: 1.06rem;
+  --text-xl: 1.175rem;
+  --text-2xl: 1.41rem;
+  --text-3xl: 1.76rem;
+  --text-4xl: 2.115rem;
+  --text-5xl: 2.82rem;
+  --text-6xl: 3.525rem;
+  --text-7xl: 4.23rem;
+  --text-8xl: 5.64rem;
+  --text-9xl: 7.52rem;
+}
+
 :root {
   font-family: 'Manrope', sans-serif;
-  color: #24332d;
-  background: #f5f7f2;
+  color: #222c35;
+  background: #f3f4f6;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -14,6 +30,18 @@
 body { margin: 0; min-width: 320px; }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
+
+@layer components {
+  .page-shell {
+    margin-inline: auto;
+    width: 100%;
+    padding: 1.5rem 1.5rem 5rem;
+  }
+
+  @media (min-width: 1024px) {
+    .page-shell { padding: 2rem 2.5rem 6rem; }
+  }
+}
 
 @keyframes dashboard-card-enter {
   from { opacity: 0; transform: translateY(10px); }
@@ -32,4 +60,15 @@ button { cursor: pointer; }
   header, footer, nav, button, #kontak, .print\:hidden { display: none !important; }
   main { background: white !important; }
   section { padding: 0 !important; margin: 0 !important; }
+}
+
+@media print {
+  .certificate-print-scope { position: absolute; inset: 0; width: 100%; margin: 0; }
+  body:has(.certificate-print-scope) * { visibility: hidden; }
+  body:has(.certificate-print-scope) .certificate-print-scope,
+  body:has(.certificate-print-scope) .certificate-print-scope * { visibility: visible; }
+  body:has(.certificate-print-scope) header,
+  body:has(.certificate-print-scope) footer,
+  body:has(.certificate-print-scope) button { display: none !important; }
+  body:has(.certificate-print-scope) .certificate-print-scope { display: block !important; }
 }
