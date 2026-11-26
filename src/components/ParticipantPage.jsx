@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Activity, ArrowDownToLine, ArrowUpFromLine, Award, CalendarDays, ClipboardList, FileText, IdCard, LogOut, UserRound } from 'lucide-react'
 import { IdCardPage } from './IdCardPage'
 import { CertificatePage } from './CertificatePage'
+import { AttendanceReminder } from './AttendanceReminder'
 import { formatCertificateDate, isCertificateAvailable } from './certificateUtils'
 import {
   createLeaveRequest,
@@ -180,6 +181,11 @@ export function ParticipantPage({ participant, participantId, onLogout }) {
             <span className="rounded-full bg-white/10 px-3 py-1.5">{participant.participantCode || 'Kode peserta tidak tersedia'}</span>
             <span className="rounded-full bg-white/10 px-3 py-1.5">{formatDate(today)}</span>
           </div>
+        </section>
+
+        <section className="mt-4 rounded-2xl border border-[#dce5ec] bg-white p-4 shadow-sm">
+          <h2 className="mb-2 text-sm font-extrabold text-[#27445d]">Pengingat absensi</h2>
+          <AttendanceReminder participant={participant} />
         </section>
 
         {activePanel === 'home' && (

@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, Award, CalendarCheck2, CheckCircle2, ChevronDown, ClipboardCheck, ClipboardList, Menu, Users, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ClipboardCheck, ClipboardList, Menu, Users, X } from 'lucide-react'
 import { BrandMark } from './components/BrandMark'
 import { AdminPage } from './components/AdminPage'
 import { AdminLogin } from './components/AdminLogin'
@@ -338,21 +338,13 @@ function App() {
           <button aria-label="Buka halaman absensi" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); if (participantSession) { setPage('participant'); window.history.pushState({}, '', '/peserta') } else setPage(adminAuthenticated ? 'attendance' : 'attendance-login') }} type="button">
             <ClipboardCheck size={16} /> Absensi
           </button>
-          <button aria-label="Buka portal peserta" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); openParticipantLogin() }} type="button">
-            <CalendarCheck2 size={16} /> Portal peserta
-          </button>
           <button aria-label="Buka halaman admin" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); openAdmin() }} type="button">
             <Users size={16} /> Admin
           </button>
           <button aria-label="Masuk sebagai peserta" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); openParticipantLogin() }} type="button">
             <Users size={16} /> Peserta
           </button>
-          {!participantSession && (
-            <button aria-label="Buka halaman sertifikat" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); setPage('certificates') }} type="button">
-              <Award size={16} /> Sertifikat
-            </button>
-          )}
-          <AttendanceReminder />
+          {!participantSession && <AttendanceReminder />}
         </div>
       </header>
 

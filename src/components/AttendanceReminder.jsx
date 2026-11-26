@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { BellRing, BellOff, Volume2 } from 'lucide-react'
-import { getAttendanceNotifications } from './attendanceReminderUtils'
+import { getAttendanceNotifications, getParticipantAttendanceNotifications } from './attendanceReminderUtils'
+import { readAttendanceRecords, readLeaveRequests } from './attendanceUtils'
 
 const enabledStorageKey = 'pintar-attendance-reminder-enabled'
 const notifiedStorageKey = 'pintar-attendance-reminder-last-notified'
+const permissionRequestedStorageKey = 'pintar-attendance-notification-permission-requested'
+const participantNotifiedStorageKey = 'pintar-attendance-participant-notified-events'
 
-function getInitialReminderState() {
+function getInitialReminderState(participant) {
   if (typeof window.Notification === 'undefined') {
     return { enabled: false, message: 'Browser ini belum mendukung notifikasi.' }
   }
@@ -15,7 +18,11 @@ function getInitialReminderState() {
       && window.Notification.permission === 'granted'
     return {
       enabled,
-      message: 'Jadwal WIB: sebelum mulai, saat mulai, dan setelah batas masuk. Web harus tetap terbuka.',
+      message: participant
+        ? enabled
+          ? 'Pengingat peserta aktif: 5 menit sebelum batas dan jika belum hadir setelah batas.'
+          : 'Aktifkan pengingat untuk menerima notifikasi absensi sesuai jadwal WIB.'
+        : 'Jadwal WIB: sebelum mulai, saat mulai, dan setelah batas masuk. Web harus tetap terbuka.',
     }
   } catch {
     return { enabled: false, message: 'Pengaturan pengingat tidak dapat disimpan di browser ini.' }
@@ -42,8 +49,8 @@ function playReminderChime(audioContext) {
   })
 }
 
-export function AttendanceReminder() {
-  const [initialState] = useState(getInitialReminderState)
+export function AttendanceReminder({ participant = null }) {
+  const [initialState] = useState(() => getInitialReminderState(participant))
   const [enabled, setEnabled] = useState(initialState.enabled)
   const [soundReady, setSoundReady] = useState(false)
   const [message, setMessage] = useState(initialState.message)
@@ -83,6 +90,11 @@ export function AttendanceReminder() {
     let permission = window.Notification.permission
     if (permission === 'default') {
       try {
+        if (window.localStorage.getItem(permissionRequestedStorageKey) === 'true') {
+          setMessage('Izin notifikasi belum diberikan. Ubah izin melalui pengaturan situs di browser.')
+          return
+        }
+        window.localStorage.setItem(permissionRequestedStorageKey, 'true')
         permission = await window.Notification.requestPermission()
       } catch {
         setMessage('Browser gagal meminta izin notifikasi. Periksa pengaturan situs di browser.')
@@ -103,9 +115,11 @@ export function AttendanceReminder() {
     }
 
     setEnabled(true)
-    setMessage(hasSound
-      ? 'Pengingat aktif: 5 menit sebelum, saat mulai, dan setelah batas masuk.'
-      : 'Notifikasi aktif, tetapi bunyi diblokir browser. Tekan Aktifkan bunyi untuk mengizinkannya.')
+    setMessage(participant
+      ? 'Pengingat peserta aktif: 5 menit sebelum batas dan jika belum hadir setelah batas.'
+      : hasSound
+        ? 'Pengingat aktif: 5 menit sebelum, saat mulai, dan setelah batas masuk.'
+        : 'Notifikasi aktif, tetapi bunyi diblokir browser. Tekan Aktifkan bunyi untuk mengizinkannya.')
   }
 
   const disableReminder = () => {
@@ -133,6 +147,50 @@ export function AttendanceReminder() {
       if (window.Notification.permission !== 'granted') {
         setEnabled(false)
         setMessage('Izin notifikasi dicabut. Aktifkan ulang pengingat untuk melanjutkan.')
+        return
+      }
+
+      if (participant) {
+        const participantRecords = readAttendanceRecords()
+        const participantLeaveRequests = readLeaveRequests()
+        getParticipantAttendanceNotifications(
+          participant,
+          participantRecords,
+          participantLeaveRequests,
+        ).forEach((reminder) => {
+          const eventKey = `${participant.id}:${reminder.dateKey}:${reminder.phase}`
+          if (notifiedEventsRef.current.has(eventKey)) return
+
+          try {
+            const savedEvents = window.localStorage.getItem(participantNotifiedStorageKey)
+            const sentEvents = savedEvents ? JSON.parse(savedEvents) : []
+            if (!Array.isArray(sentEvents)) throw new Error('Data status notifikasi tidak valid.')
+            if (sentEvents.includes(eventKey)) {
+              notifiedEventsRef.current.add(eventKey)
+              return
+            }
+            window.localStorage.setItem(
+              participantNotifiedStorageKey,
+              JSON.stringify([...sentEvents, eventKey].slice(-1000)),
+            )
+          } catch {
+            setMessage('Pengingat gagal dijadwalkan karena penyimpanan browser tidak tersedia.')
+            return
+          }
+
+          notifiedEventsRef.current.add(eventKey)
+          try {
+            const notification = new window.Notification(reminder.title, {
+              body: reminder.body,
+              icon: '/pelindo-logo.png',
+              tag: `pintar-attendance-${eventKey}`,
+            })
+            notification.onclick = () => window.focus()
+            if (audioContextRef.current?.state === 'running') playReminderChime(audioContextRef.current)
+          } catch {
+            setMessage('Browser gagal menampilkan notifikasi absensi.')
+          }
+        })
         return
       }
 
@@ -178,13 +236,13 @@ export function AttendanceReminder() {
     }
 
     checkReminder()
-    const intervalId = window.setInterval(checkReminder, 15_000)
+    const intervalId = window.setInterval(checkReminder, participant ? 1_000 : 15_000)
     document.addEventListener('visibilitychange', checkReminder)
     return () => {
       window.clearInterval(intervalId)
       document.removeEventListener('visibilitychange', checkReminder)
     }
-  }, [enabled])
+  }, [enabled, participant])
 
   return (
     <div className="sm:max-w-56">
