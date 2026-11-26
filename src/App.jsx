@@ -17,7 +17,7 @@ import { AttendanceReminder } from './components/AttendanceReminder'
 import { isCertificateAvailable } from './components/certificateUtils'
 import { ParticipantLogin } from './components/ParticipantLogin'
 import { ParticipantPage } from './components/ParticipantPage'
-import { participantSessionStorageKey } from './components/participantAuth'
+import { getParticipantForSession, participantSessionStorageKey } from './components/participantAuth'
 
 const homeSections = [
   { label: 'Peserta Terdata', id: 'peserta-terdata' },
@@ -59,6 +59,10 @@ function App() {
   const [page, setPage] = useState(() => {
     const path = window.location.pathname
     const cardRouteMatch = path.match(/^\/id-card\/(.+)$/)
+    if ((path === '/peserta' || path.startsWith('/peserta/')) && !participantSession) {
+      window.history.replaceState({}, '', '/login')
+      return 'participant-login'
+    }
     if (participantSession && !cardRouteMatch) {
       window.history.replaceState({}, '', '/peserta')
       return 'participant'
@@ -114,9 +118,14 @@ function App() {
         } else {
           setPage('participant-login')
         }
-      } else if (pathname === '/peserta') {
-        setPage(readParticipantSession() ? 'participant' : 'participant-login')
-        if (!readParticipantSession()) window.history.replaceState({}, '', '/login')
+      } else if (pathname === '/peserta' || pathname.startsWith('/peserta/')) {
+        if (readParticipantSession()) {
+          window.history.replaceState({}, '', '/peserta')
+          setPage('participant')
+        } else {
+          window.history.replaceState({}, '', '/login')
+          setPage('participant-login')
+        }
       } else if (pathname === '/admin') {
         if (readParticipantSession()) {
           window.history.replaceState({}, '', '/peserta')
@@ -295,7 +304,7 @@ function App() {
     if (storageError) window.alert('Sesi tidak dapat dihapus dari penyimpanan browser. Tutup tab ini dan bersihkan data situs sebelum menggunakan perangkat bersama.')
   }
 
-  const activeParticipant = participants.find((participant) => participant.id === participantSession?.participantId) || null
+  const activeParticipant = getParticipantForSession(participants, participantSession)
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#f3f4f6] text-[#222c35]">
@@ -338,9 +347,11 @@ function App() {
           <button aria-label="Masuk sebagai peserta" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); openParticipantLogin() }} type="button">
             <Users size={16} /> Peserta
           </button>
-          <button aria-label="Buka halaman sertifikat" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); if (participantSession) { window.history.pushState({}, '', '/peserta'); setPage('participant') } else setPage('certificates') }} type="button">
-            <Award size={16} /> Sertifikat
-          </button>
+          {!participantSession && (
+            <button aria-label="Buka halaman sertifikat" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); setPage('certificates') }} type="button">
+              <Award size={16} /> Sertifikat
+            </button>
+          )}
           <AttendanceReminder />
         </div>
       </header>
@@ -353,7 +364,7 @@ function App() {
 
       {page === 'participant' && (
         activeParticipant
-          ? <ParticipantPage onLogout={logoutParticipant} participant={activeParticipant} />
+          ? <ParticipantPage onLogout={logoutParticipant} participant={activeParticipant} participantId={participantSession.participantId} />
           : <ParticipantLogin onAdminLogin={openAdmin} onBack={navigateToHome} onLogin={startParticipantSession} participants={participants} />
       )}
 
@@ -362,7 +373,7 @@ function App() {
       {page === 'admin' && (
         participantSession
           ? activeParticipant
-            ? <ParticipantPage onLogout={logoutParticipant} participant={activeParticipant} />
+            ? <ParticipantPage onLogout={logoutParticipant} participant={activeParticipant} participantId={participantSession.participantId} />
             : <ParticipantLogin onAdminLogin={openAdmin} onBack={navigateToHome} onLogin={startParticipantSession} participants={participants} />
           : adminAuthenticated
           ? <AdminPage participants={participants} onBack={() => { setAdminAuthenticated(false); navigateToHome() }} onOpenParticipants={() => { setParticipantsOpenedFromAdmin(true); setPage('participants') }} onUpdateParticipant={updateParticipant} onAdd={() => { setAdminAuthenticated(false); navigateToHome(); setPage('form') }} onLogout={() => { setAdminAuthenticated(false); navigateToHome() }} />

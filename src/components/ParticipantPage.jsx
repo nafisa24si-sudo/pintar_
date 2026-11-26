@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Activity, ArrowDownToLine, ArrowUpFromLine, CalendarDays, ClipboardList, FileText, IdCard, LogOut, UserRound } from 'lucide-react'
+import { Activity, ArrowDownToLine, ArrowUpFromLine, Award, CalendarDays, ClipboardList, FileText, IdCard, LogOut, UserRound } from 'lucide-react'
 import { IdCardPage } from './IdCardPage'
+import { CertificatePage } from './CertificatePage'
+import { formatCertificateDate, isCertificateAvailable } from './certificateUtils'
 import {
   createLeaveRequest,
   formatLocalDate,
@@ -48,9 +50,10 @@ function SectionTitle({ eyebrow, title, description }) {
   )
 }
 
-export function ParticipantPage({ participant, onLogout }) {
+export function ParticipantPage({ participant, participantId, onLogout }) {
   const [activeTab, setActiveTab] = useState('beranda')
   const [activePanel, setActivePanel] = useState('home')
+  const [autoPrintCertificate, setAutoPrintCertificate] = useState(false)
   const [records, setRecords] = useState(() => readAttendanceRecords())
   const [requests, setRequests] = useState(() => readLeaveRequests())
   const [leaveType, setLeaveType] = useState('izin')
@@ -89,6 +92,19 @@ export function ParticipantPage({ participant, onLogout }) {
     terlambat: new Set(myRecords.filter((record) => record.status !== 'on-time').map((record) => record.date)).size,
     izin: countType('izin'),
     sakit: countType('sakit'),
+  }
+  const certificateAvailable = isCertificateAvailable(participant)
+  const certificateNumber = participant.certificateNumber || participant.certificate_number
+
+  if (!participant?.id || participant.id !== participantId) {
+    return (
+      <section className="page-shell max-w-xl">
+        <div className="rounded-2xl border border-[#dde1e5] bg-white p-6 text-center">
+          <h1 className="text-xl font-extrabold text-[#222c35]">Akses sertifikat ditolak</h1>
+          <p className="mt-2 text-sm text-[#757c83]">Data peserta tidak cocok dengan sesi yang sedang digunakan.</p>
+        </div>
+      </section>
+    )
   }
 
   const readEvidence = (event) => {
@@ -135,7 +151,12 @@ export function ParticipantPage({ participant, onLogout }) {
 
   const selectTab = (tab) => {
     setActiveTab(tab)
-    setActivePanel(tab === 'id-card' ? 'id-card' : tab === 'profil' ? 'profile' : 'home')
+    setActivePanel({
+      'id-card': 'id-card',
+      sertifikat: 'certificate',
+      profil: 'profile',
+      beranda: 'home',
+    }[tab])
   }
 
   return (
@@ -268,6 +289,55 @@ export function ParticipantPage({ participant, onLogout }) {
 
         {activePanel === 'id-card' && <div className="mt-5"><IdCardPage onBack={() => selectTab('beranda')} onFinish={() => selectTab('beranda')} participant={participant} /></div>}
 
+        {activePanel === 'certificate' && (
+          <section className="mt-6">
+            <SectionTitle eyebrow="Dokumen peserta" title="Sertifikat Magang" description="Sertifikat yang ditampilkan terhubung ke akun peserta ini." />
+            {!certificateAvailable ? (
+              <div className="rounded-2xl border border-[#dce5ec] bg-white p-6 text-center shadow-sm">
+                <Award className="mx-auto text-[#8aa2b6]" size={30} />
+                <p className="mt-3 text-sm font-semibold text-[#60788c]">Sertifikat belum tersedia. Sertifikat dapat dilihat setelah periode magang selesai.</p>
+              </div>
+            ) : (
+              <article className="rounded-2xl border border-[#dce5ec] bg-white p-5 shadow-sm sm:p-6">
+                <div className="mb-5 flex items-center gap-3 border-b border-[#edf1f4] pb-4">
+                  <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#e8f1f8] text-[#2c5e85]"><Award size={21} /></span>
+                  <div>
+                    <h3 className="font-extrabold text-[#27445d]">{participant.name || 'Peserta Magang'}</h3>
+                    <p className="text-xs text-[#82909c]">{participant.participantCode || participant.id}</p>
+                  </div>
+                </div>
+                <dl className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    ['Nama peserta', participant.name],
+                    ['Institusi', participant.institution],
+                    ['Program Studi', participant.major],
+                    ['Bagian', participant.division],
+                    ['Periode magang', `${formatCertificateDate(participant.startDate)} – ${formatCertificateDate(participant.endDate)}`],
+                    ['Nomor sertifikat', certificateNumber || 'Nomor sertifikat belum tersedia'],
+                  ].map(([label, value]) => (
+                    <div className="rounded-xl bg-[#f7f9fb] p-3" key={label}>
+                      <dt className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#84919b]">{label}</dt>
+                      <dd className="mt-1 break-words text-sm font-bold text-[#344e64]">{value || '-'}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                  <button className="flex-1 rounded-xl bg-[#173f64] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#24567f]" onClick={() => { setAutoPrintCertificate(false); setActivePanel('certificate-preview') }} type="button">Lihat Sertifikat</button>
+                  <button className="flex-1 rounded-xl border border-[#dce4eb] px-4 py-3 text-sm font-bold text-[#37536c] transition hover:bg-[#f4f8fb]" onClick={() => { setAutoPrintCertificate(true); setActivePanel('certificate-preview') }} type="button">Cetak / Download</button>
+                </div>
+              </article>
+            )}
+          </section>
+        )}
+
+        {activePanel === 'certificate-preview' && (
+          <CertificatePage
+            autoPrint={autoPrintCertificate}
+            onBack={() => { setAutoPrintCertificate(false); setActivePanel('certificate'); setActiveTab('sertifikat') }}
+            participant={participant}
+          />
+        )}
+
         {activePanel === 'profile' && (
           <section className="mt-6">
             <SectionTitle eyebrow="Akun peserta" title="Profil saya" description="Informasi profil berasal dari data peserta yang terdaftar." />
@@ -296,10 +366,11 @@ export function ParticipantPage({ participant, onLogout }) {
       </div>
 
       <nav aria-label="Navigasi peserta" className="fixed inset-x-0 bottom-0 z-30 border-t border-[#dce4eb] bg-white/95 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-8px_24px_rgba(27,56,82,0.08)] backdrop-blur-md">
-        <div className="mx-auto grid max-w-md grid-cols-3">
+        <div className="mx-auto grid max-w-xl grid-cols-4">
           {[
             ['beranda', 'Beranda', Activity],
             ['id-card', 'ID Card', IdCard],
+            ['sertifikat', 'Sertifikat', Award],
             ['profil', 'Profil', UserRound],
           ].map(([tab, label, Icon]) => (
             <button aria-current={activeTab === tab ? 'page' : undefined} className={`flex flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-bold ${activeTab === tab ? 'text-[#24567f]' : 'text-[#84919b]'}`} key={tab} onClick={() => selectTab(tab)} type="button"><Icon size={19} />{label}</button>

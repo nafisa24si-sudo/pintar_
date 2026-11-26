@@ -49,6 +49,11 @@ function findParticipantByEmail(participants, email) {
   return matches[0] || null
 }
 
+export function getParticipantForSession(participants, session) {
+  if (session?.role !== 'participant' || typeof session.participantId !== 'string') return null
+  return participants.find((participant) => participant.id === session.participantId) || null
+}
+
 export async function activateParticipantAccount(participants, {
   email,
   password,
