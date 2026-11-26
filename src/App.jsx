@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, Award, CheckCircle2, ChevronDown, ClipboardList, Menu, Users, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Award, CalendarCheck2, CheckCircle2, ChevronDown, ClipboardCheck, ClipboardList, Menu, Users, X } from 'lucide-react'
 import { BrandMark } from './components/BrandMark'
 import { AdminPage } from './components/AdminPage'
 import { AdminLogin } from './components/AdminLogin'
@@ -12,10 +12,12 @@ import { SuccessState } from './components/SuccessState'
 import { IdCardPage } from './components/IdCardPage'
 import { CertificatePage } from './components/CertificatePage'
 import { CertificateDirectory } from './components/CertificateDirectory'
+import { AttendancePage } from './components/AttendancePage'
+import { ParticipantAttendancePortal } from './components/ParticipantAttendancePortal'
+import { AttendanceReminder } from './components/AttendanceReminder'
 import { isCertificateAvailable } from './components/certificateUtils'
 
 const homeSections = [
-  { label: 'Alur Pendataan', id: 'alur' },
   { label: 'Peserta Terdata', id: 'peserta-terdata' },
   { label: 'Statistik', id: 'statistik' },
   { label: 'Informasi', id: 'informasi' },
@@ -121,6 +123,13 @@ function App() {
     setPage('id-card')
   }
 
+  const updateParticipant = (updatedParticipant) => {
+    setParticipants((current) => current.map((participant) => (
+      participant.id === updatedParticipant.id ? updatedParticipant : participant
+    )))
+    setSelectedParticipant(updatedParticipant)
+  }
+
   const openCertificate = (participant, returnPage, autoPrint = false) => {
     if (!isCertificateAvailable(participant)) return
     setSelectedParticipant(participant)
@@ -141,6 +150,20 @@ function App() {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  const navigateToHome = () => {
+    window.history.pushState({}, '', '/')
+    setAdminAuthenticated(false)
+    setSelectedParticipant(null)
+    setHomeDropdownOpen(false)
+    setMobileMenuOpen(false)
+    if (page !== 'welcome') {
+      setPage('welcome')
+      window.setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 80)
+      return
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#f3f4f6] text-[#222c35]">
       <header className={`sticky top-4 z-20 mx-4 flex w-[calc(100%-2rem)] items-center justify-between rounded-full border px-4 py-3 transition-all duration-300 sm:top-5 sm:mx-6 sm:w-[calc(100%-3rem)] sm:px-6 lg:mx-10 lg:w-[calc(100%-5rem)] lg:px-8 ${isScrolled ? 'border-[#d2d8de] bg-white/95 shadow-[0_12px_30px_rgba(36,51,45,0.1)] backdrop-blur-md' : 'border-[#dfe3e6] bg-white/90 shadow-[0_8px_24px_rgba(36,51,45,0.06)] backdrop-blur-md'}`}>
@@ -150,9 +173,14 @@ function App() {
         </button>
         <div className={`${mobileMenuOpen ? 'absolute left-4 right-4 top-[calc(100%-4px)] flex' : 'hidden'} flex-col gap-1 rounded-2xl border border-[#dbdfe3] bg-white p-2 shadow-[0_18px_35px_rgba(36,51,45,0.1)] sm:static sm:flex sm:flex-row sm:items-center sm:gap-4 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none`}>
           <div className="relative" ref={homeMenuRef}>
-            <button aria-expanded={homeDropdownOpen} aria-haspopup="menu" aria-label="Buka menu beranda" className="group flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setAdminAuthenticated(false); setHomeDropdownOpen((open) => !open) }} type="button">
-              Beranda <ChevronDown className={`transition-transform duration-200 ${homeDropdownOpen ? 'rotate-180' : ''}`} size={15} />
-            </button>
+            <div className="flex items-center">
+              <button aria-label="Kembali ke beranda" className="flex flex-1 items-center rounded-l-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={navigateToHome} type="button">
+                Beranda
+              </button>
+              <button aria-expanded={homeDropdownOpen} aria-haspopup="menu" aria-label="Buka menu bagian beranda" className="flex items-center rounded-r-lg px-2 py-2 text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35]" onClick={() => setHomeDropdownOpen((open) => !open)} type="button">
+                <ChevronDown className={`transition-transform duration-200 ${homeDropdownOpen ? 'rotate-180' : ''}`} size={15} />
+              </button>
+            </div>
             <AnimatePresence>
               {homeDropdownOpen && (
                 <motion.div animate={{ opacity: 1, y: 0 }} aria-label="Navigasi beranda" className="absolute left-0 top-[calc(100%+10px)] z-30 w-[min(350px,calc(100vw-2rem))] rounded-[24px] border border-[#dbdfe3] bg-white/95 p-2 shadow-[0_22px_55px_rgba(36,51,45,0.14)] backdrop-blur-md sm:left-1/2 sm:-translate-x-1/2" exit={{ opacity: 0, y: -8 }} initial={{ opacity: 0, y: -8 }} transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}>
@@ -165,20 +193,33 @@ function App() {
               )}
             </AnimatePresence>
           </div>
+          <button aria-label="Buka halaman absensi" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); setPage(adminAuthenticated ? 'attendance' : 'attendance-login') }} type="button">
+            <ClipboardCheck size={16} /> Absensi
+          </button>
+          <button aria-label="Buka portal absensi peserta" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); setPage('participant-attendance') }} type="button">
+            <CalendarCheck2 size={16} /> Portal peserta
+          </button>
           <button aria-label="Buka halaman admin" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); setPage('admin') }} type="button">
             <Users size={16} /> Admin
           </button>
           <button aria-label="Buka halaman sertifikat" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); setPage('certificates') }} type="button">
             <Award size={16} /> Sertifikat
           </button>
+          <AttendanceReminder />
         </div>
       </header>
 
       {page === 'welcome' && <LandingHome onStart={() => setPage('form')} participants={participants} />}
 
+      {page === 'attendance' && <section className="page-shell max-w-7xl"><AttendancePage participants={participants} /></section>}
+
+      {page === 'participant-attendance' && <ParticipantAttendancePortal participants={participants} />}
+
+      {page === 'attendance-login' && <AdminLogin onBack={() => setPage('welcome')} onLogin={() => { setAdminAuthenticated(true); setPage('attendance') }} />}
+
       {page === 'admin' && (
         adminAuthenticated
-          ? <AdminPage participants={participants} onBack={() => { setAdminAuthenticated(false); setPage('welcome') }} onOpenParticipants={() => { setParticipantsOpenedFromAdmin(true); setPage('participants') }} onAdd={() => { setAdminAuthenticated(false); setPage('form') }} onLogout={() => { setAdminAuthenticated(false); setPage('welcome') }} />
+          ? <AdminPage participants={participants} onBack={() => { setAdminAuthenticated(false); setPage('welcome') }} onOpenParticipants={() => { setParticipantsOpenedFromAdmin(true); setPage('participants') }} onUpdateParticipant={updateParticipant} onAdd={() => { setAdminAuthenticated(false); setPage('form') }} onLogout={() => { setAdminAuthenticated(false); setPage('welcome') }} />
           : <AdminLogin onBack={() => setPage('welcome')} onLogin={() => { setAdminAuthenticated(true); setPage('admin') }} />
       )}
 
@@ -200,7 +241,16 @@ function App() {
         </section>
       )}
 
-      {page === 'participants' && <ParticipantsPage participants={participants} onBack={() => { setPage(participantsOpenedFromAdmin ? 'admin' : 'welcome') }} onAdd={() => { setAdminAuthenticated(false); setPage('form') }} onSelect={(participant) => { setSelectedParticipant(participant); setPage('detail') }} />}
+      {page === 'participants' && (
+        <ParticipantsPage
+          participants={participants}
+          onBack={() => { setPage(participantsOpenedFromAdmin ? 'admin' : 'welcome') }}
+          onAdd={() => { setAdminAuthenticated(false); setPage('form') }}
+          onEdit={updateParticipant}
+          onSelect={(participant) => { setSelectedParticipant(participant); setPage('detail') }}
+          onViewIdCard={openIdCard}
+        />
+      )}
 
       {page === 'detail' && selectedParticipant && <ParticipantDetail onBack={() => setPage('participants')} onViewCertificate={(participant) => openCertificate(participant, 'detail')} participant={selectedParticipant} />}
 

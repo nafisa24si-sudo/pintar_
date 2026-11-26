@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useInView } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, BriefcaseBusiness, Building2, CalendarDays, ImageOff, Sparkles, Users } from 'lucide-react'
 import { QrPanel } from './QrPanel'
+import harborBackground from '../assets/pelindo-port-background.png'
 
 const internshipRules = [
   { title: 'Kehadiran dan kedisiplinan', content: 'Peserta magang wajib hadir sesuai jadwal dan mengikuti ketentuan waktu kerja yang berlaku di lingkungan unit kerja.' },
@@ -81,10 +82,13 @@ export function LandingHome({ participants, onStart }) {
 
   return (
     <>
-      <section className="mx-auto grid w-full max-w-7xl gap-12 px-6 pb-16 pt-8 lg:grid-cols-[minmax(0,0.88fr)_minmax(420px,1.12fr)] lg:items-center lg:px-10 lg:pb-24 lg:pt-16">
-        <div className="max-w-xl">
+      <section className="relative isolate w-full overflow-hidden">
+        <img alt="" aria-hidden="true" className="absolute inset-0 z-0 h-full w-full object-cover object-center" src={harborBackground} />
+        <div aria-hidden="true" className="absolute inset-0 z-0 bg-gradient-to-r from-white/75 via-white/40 to-white/15" />
+        <div className="relative z-10 mx-auto grid w-full max-w-7xl gap-12 px-6 pb-16 pt-8 lg:grid-cols-[minmax(0,0.88fr)_minmax(420px,1.12fr)] lg:items-center lg:px-10 lg:pb-24 lg:pt-16">
+          <div className="max-w-xl">
           <motion.div animate={{ opacity: 1, y: 0 }} className="mb-8 inline-flex items-center gap-2 rounded-full border border-[#d7dde2] bg-white/70 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-[#556d84] shadow-sm" initial={{ opacity: 0, y: 14 }} transition={{ duration: 0.55 }}><Sparkles size={15} strokeWidth={2.5} /> Langkah pertama kamu</motion.div>
-          <motion.h1 animate={{ opacity: 1, y: 0 }} className="max-w-lg text-5xl font-extrabold leading-[0.98] tracking-[-0.06em] text-[#1f2830] sm:text-7xl" initial={{ opacity: 0, y: 22 }} transition={{ delay: 0.12, duration: 0.65 }}>Selamat datang di <span className="text-[#315e8b]">Pelindo.</span></motion.h1>
+          <motion.h1 animate={{ opacity: 1, y: 0 }} className="max-w-lg text-3xl font-extrabold leading-[0.98] tracking-[-0.06em] text-[#1f2830] sm:text-5xl" initial={{ opacity: 0, y: 22 }} transition={{ delay: 0.12, duration: 0.65 }}>Selamat datang di <span className="text-[#315e8b]">Pelindo.</span></motion.h1>
           <motion.p animate={{ opacity: 1, y: 0 }} className="mt-7 max-w-md text-lg leading-8 text-[#556e86]" initial={{ opacity: 0, y: 18 }} transition={{ delay: 0.24, duration: 0.6 }}>Lengkapi data diri kamu untuk memulai pengalaman magang yang lebih terarah dan terhubung.</motion.p>
           <motion.div animate={{ opacity: 1, y: 0 }} className="mt-10 flex flex-wrap items-center gap-5" initial={{ opacity: 0, y: 16 }} transition={{ delay: 0.36, duration: 0.6 }}>
             <button className="group inline-flex items-center gap-3 rounded-xl bg-[#222c35] px-5 py-3.5 text-sm font-bold text-white shadow-[0_12px_24px_rgba(36,51,45,0.18)] transition hover:-translate-y-0.5 hover:bg-[#303e4c] hover:shadow-[0_16px_28px_rgba(36,51,45,0.22)]" onClick={onStart} type="button">Mulai pendataan <ArrowRight className="transition-transform group-hover:translate-x-1" size={17} /></button>
@@ -93,13 +97,10 @@ export function LandingHome({ participants, onStart }) {
           <motion.div animate={{ opacity: 1 }} className="mt-14 grid max-w-md grid-cols-3 gap-4 border-t border-[#dbdfe3] pt-5 text-sm" initial={{ opacity: 0 }} transition={{ delay: 0.5, duration: 0.6 }}>
             <div><strong className="block text-xl text-[#222c35]">01</strong><span className="text-[#7a828a]">Scan QR</span></div><div><strong className="block text-xl text-[#222c35]">02</strong><span className="text-[#7a828a]">Isi data</span></div><div><strong className="block text-xl text-[#222c35]">03</strong><span className="text-[#7a828a]">Tersimpan</span></div>
           </motion.div>
+          </div>
+          <motion.div initial={{ opacity: 0, x: 36 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.75, ease: [0.22, 1, 0.36, 1] }} whileHover={{ y: -5 }}><QrPanel /></motion.div>
         </div>
-        <motion.div initial={{ opacity: 0, x: 36 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.75, ease: [0.22, 1, 0.36, 1] }} whileHover={{ y: -5 }}><QrPanel onContinue={onStart} /></motion.div>
       </section>
-
-      <Reveal className="mx-auto w-full max-w-7xl px-6 pb-20 lg:px-10" id="alur">
-        <div className="rounded-[2rem] bg-[#222c35] p-6 text-white shadow-[0_20px_45px_rgba(36,51,45,0.12)] sm:p-8"><div className="mb-8 flex items-start justify-between gap-5"><div><p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#659fd8]">Alur pendataan</p><h2 className="text-3xl font-extrabold tracking-[-0.05em] sm:text-4xl">Sederhana dari awal sampai tersimpan.</h2></div><Sparkles className="shrink-0 text-[#659fd8]" size={24} /></div><div className="grid gap-3 sm:grid-cols-4">{['Scan QR', 'Isi data', 'Submit', 'Data tersimpan'].map((step, index) => <div className="rounded-xl border border-white/10 bg-white/5 p-4" key={step}><span className="text-xs font-bold text-[#659fd8]">0{index + 1}</span><p className="mt-7 text-sm font-bold text-white">{step}</p></div>)}</div></div>
-      </Reveal>
 
       <Reveal className="mx-auto w-full max-w-7xl px-6 pb-10 lg:px-10" id="peserta-terdata">
         <div className="mb-7"><p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#2f5a84]">Peserta magang</p><h2 className="text-3xl font-extrabold tracking-[-0.05em] text-[#1f2830] sm:text-4xl">Peserta yang sudah terdata</h2></div>{participants.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{participants.slice(0, 6).map((participant) => <motion.div className="rounded-2xl border border-[#dbdfe3] bg-white p-5 shadow-[0_12px_30px_rgba(36,51,45,0.04)]" key={participant.id} whileHover={{ y: -4 }}><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#cedff0] font-extrabold text-[#305880]">{participant.name.charAt(0).toUpperCase()}</span><div><h3 className="font-extrabold text-[#303e4c]">{participant.name}</h3><p className="text-xs text-[#838a91]">{participant.institution || 'Institusi belum diisi'}</p></div></div><p className="mt-5 text-sm text-[#556e86]">{participant.major || 'Program studi belum diisi'}</p><p className="mt-1 text-xs font-bold text-[#2f5a84]">{participant.division || 'Divisi belum diisi'}</p><p className="mt-3 border-t border-[#eceef0] pt-3 text-xs font-semibold text-[#838a91]"><span className="font-bold uppercase tracking-[0.1em] text-[#9aa0a6]">Periode:</span> {formatPeriod(participant.startDate, participant.endDate)}</p></motion.div>)}</div> : <DataEmptyState label="peserta" />}

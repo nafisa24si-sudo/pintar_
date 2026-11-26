@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { ArrowLeft, Printer } from 'lucide-react'
 import { formatCertificateDate, isCertificateAvailable } from './certificateUtils'
 
-export function CertificatePage({ participant, onBack, autoPrint = false, institutionLogo, pelindoLogo, signerName, signerTitle }) {
+export function CertificatePage({ participant, onBack, autoPrint = false, institutionLogo, pelindoLogo = '/pelindo-logo.png', signerName, signerTitle }) {
   const available = isCertificateAvailable(participant)
   const campusLogo = institutionLogo || participant?.institutionLogo || participant?.institution_logo
 

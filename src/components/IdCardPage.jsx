@@ -2,75 +2,58 @@ import { QRCodeSVG } from 'qrcode.react'
 import { Printer } from 'lucide-react'
 import { createAttendanceQrValue } from './attendanceUtils'
 
-const formatPeriod = (startDate, endDate) => {
-  if (!startDate && !endDate) return '-'
-  const start = startDate ? new Date(startDate) : null
-  const end = endDate ? new Date(endDate) : null
-
-  const formatDate = (date) => {
-    if (!date || Number.isNaN(date.getTime())) return ''
-    return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(date)
-  }
-
-  if (start && end) return `${formatDate(start)} - ${formatDate(end)}`
-  return start ? formatDate(start) : formatDate(end)
-}
-
-function CardField({ label, value, wide = false }) {
-  return (
-    <div className={wide ? 'col-span-2 min-w-0' : 'min-w-0'}>
-      <p className="text-[7px] font-black uppercase tracking-[0.16em] text-[#72879a]">{label}</p>
-      <p className="mt-1 break-words text-[9px] font-bold leading-[1.25] text-[#1f3448]">{value || '-'}</p>
-    </div>
-  )
-}
-
-function IdCardFrame({ participant }) {
+export function IdCardFrame({ participant }) {
   const photoSrc = participant.photo || '/placeholder-avatar.png'
+  const internshipYear = participant.startDate
+    ? String(participant.startDate).slice(0, 4)
+    : '2026'
 
   return (
     <div className="id-card-face id-card-front aspect-[3/4] w-full max-w-[320px]">
-      <div className="h-full w-full overflow-hidden rounded-[24px] border border-[#d6e0e8] bg-white shadow-[0_16px_34px_rgba(30,60,86,0.14)] print:rounded-none print:border-0 print:shadow-none">
-        <div className="flex h-full flex-col text-[#1f3448]">
-          <header className="flex h-[106px] shrink-0 flex-col items-center bg-[#174f7a] px-4 pt-3 text-center text-white">
-            <span className="rounded-md bg-white px-2 py-0.5">
-              <img alt="Pelindo" className="h-5 w-auto object-contain" src="/pelindo-logo.png" />
-            </span>
-            <p className="mt-2 text-[8px] font-extrabold uppercase tracking-[0.16em]">PT Pelindo Regional 1</p>
-            <p className="mt-0.5 text-[7px] font-bold uppercase tracking-[0.2em] text-[#d9e8f4]">Dumai</p>
-          </header>
+      <div className="relative h-full w-full overflow-hidden rounded-[24px] border border-[#91aeca]/60 bg-[#08284d] text-white shadow-[0_18px_38px_rgba(20,53,87,0.28)] print:rounded-none print:border-0 print:shadow-none">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(91,157,214,.42),transparent_24%),linear-gradient(145deg,#1a568b_0%,#0b3563_42%,#061d3a_100%)]" />
+        <div className="absolute -right-16 top-16 h-52 w-52 rounded-full border-[22px] border-white/[0.07]" />
+        <div className="absolute -left-20 bottom-16 h-56 w-56 rounded-full border-[26px] border-[#72afe1]/[0.09]" />
+        <div className="absolute inset-0 opacity-[0.12] [background-image:linear-gradient(30deg,transparent_40%,rgba(255,255,255,.28)_41%,rgba(255,255,255,.28)_42%,transparent_43%),linear-gradient(150deg,transparent_40%,rgba(255,255,255,.20)_41%,rgba(255,255,255,.20)_42%,transparent_43%)] [background-size:72px_72px]" />
 
-          <div className="-mt-8 flex justify-center">
-            <div className="h-[120px] w-[96px] overflow-hidden rounded-[16px] border-[4px] border-white bg-[#e4eff7] shadow-[0_7px_18px_rgba(23,79,122,0.18)]">
-              {photoSrc === '/placeholder-avatar.png' ? (
-                <div className="flex h-full w-full items-center justify-center bg-[#dceaf5]">
-                  <div className="relative h-12 w-12 rounded-full bg-white">
-                    <div className="absolute left-1/2 top-[10px] h-4 w-4 -translate-x-1/2 rounded-full bg-[#a7c3da]" />
-                    <div className="absolute bottom-[8px] left-1/2 h-7 w-8 -translate-x-1/2 rounded-t-[14px] bg-[#a7c3da]" />
-                  </div>
-                </div>
-              ) : (
-                <img alt={participant.name || 'Pas foto peserta'} className="h-full w-full object-cover" src={photoSrc} />
-              )}
+        <header className="absolute left-5 right-5 top-5 z-20 flex h-[48px] items-center justify-center rounded-[15px] bg-white px-3.5 shadow-[0_8px_24px_rgba(4,31,62,0.20)]">
+          <div className="flex items-center gap-2">
+            <img alt="Danantara" className="h-6 w-[84px] object-contain" src="/danantara-logo.png" />
+            <img alt="Pelindo" className="h-6 w-[84px] object-contain" src="/pelindo-logo.png" />
+          </div>
+        </header>
+
+        <div className="absolute inset-x-7 bottom-[105px] top-[92px] z-10 overflow-hidden rounded-[28px] border border-white/35 bg-[#a9bdd1]/25 shadow-[inset_0_0_26px_rgba(255,255,255,.10),0_8px_24px_rgba(3,24,50,.16)]">
+          {photoSrc === '/placeholder-avatar.png' ? (
+            <div className="flex h-full items-end justify-center bg-gradient-to-b from-[#82aad1]/45 to-[#315f8a]/70">
+              <div className="relative mb-12 h-32 w-32 rounded-full bg-white/20">
+                <div className="absolute left-1/2 top-6 h-14 w-14 -translate-x-1/2 rounded-full bg-white/35" />
+                <div className="absolute bottom-0 left-1/2 h-[72px] w-28 -translate-x-1/2 rounded-t-[52px] bg-white/35" />
+              </div>
             </div>
+          ) : (
+            <img alt={participant.name || 'Pas foto peserta'} className="h-full w-full object-cover object-center" src={photoSrc} />
+          )}
+          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_48%,rgba(3,24,50,.10)_65%,rgba(3,18,39,.88)_100%)]" />
+          <div className="absolute bottom-5 left-4 right-4 text-center">
+            <p className="text-[8px] font-extrabold uppercase tracking-[0.22em] text-[#dcecff]/85">{participant.division || 'Peserta Magang'}</p>
+            <h2 className="mt-1.5 break-words text-[17px] font-extrabold uppercase leading-tight tracking-[0.04em] text-white drop-shadow-lg">{participant.name || 'Nama Peserta'}</h2>
           </div>
+        </div>
 
-          <div className="px-4 pt-2 text-center">
-            <p className="text-[7px] font-black uppercase tracking-[0.2em] text-[#39739d]">Peserta Magang</p>
-            <h2 className="mt-1 break-words text-[14px] font-extrabold leading-tight text-[#183b59]">{participant.name || 'Nama Peserta'}</h2>
+        <div className="absolute bottom-0 left-0 right-0 z-20 flex h-[90px] items-end justify-between px-5 pb-5">
+          <div className="min-w-0 pr-3">
+            <p className="text-[7px] font-bold uppercase tracking-[0.18em] text-[#9eb3c8]">PT Pelindo Regional 1 Dumai</p>
+            <p className="mt-1 max-w-[190px] truncate text-[9px] font-bold text-white/95">{participant.institution || 'Institusi'}</p>
           </div>
+          <div className="shrink-0 text-right">
+            <p className="text-[7px] font-bold uppercase tracking-[0.16em] text-[#9eb3c8]">Intern</p>
+            <p className="mt-1 text-[12px] font-extrabold tracking-[0.08em] text-white">{internshipYear}</p>
+          </div>
+        </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 px-4 text-left">
-            <CardField label="Institusi" value={participant.institution} wide />
-            <CardField label="Program Studi" value={participant.major} wide />
-            <CardField label="Divisi" value={participant.division} />
-            <CardField label="Periode" value={formatPeriod(participant.startDate, participant.endDate)} />
-          </div>
-
-          <div className="mx-4 mb-3 mt-auto flex items-center justify-between gap-2 rounded-xl bg-[#eaf2f8] px-3 py-2">
-            <span className="text-[7px] font-black uppercase tracking-[0.16em] text-[#55728b]">ID Peserta</span>
-            <span className="min-w-0 break-all text-right font-mono text-[9px] font-bold text-[#174f7a]">{participant.participantCode || 'MAGANG-2026-001'}</span>
-          </div>
+        <div className="absolute right-3 top-[64px] z-10 flex flex-col gap-1.5 opacity-30">
+          {[0, 1, 2].map((ring) => <span className="grid h-7 w-7 place-items-center rounded-full border border-white/30" key={ring}><span className="h-2.5 w-2.5 rounded-full border border-white/30" /></span>)}
         </div>
       </div>
     </div>
@@ -82,23 +65,26 @@ function IdCardBack({ participant }) {
 
   return (
     <div className="id-card-face id-card-back aspect-[3/4] w-full max-w-[320px]">
-      <div className="flex h-full flex-col overflow-hidden rounded-[24px] border border-[#d6e0e8] bg-white text-center text-[#1f3448] shadow-[0_16px_34px_rgba(30,60,86,0.14)] print:rounded-none print:border-0 print:shadow-none">
-        <header className="flex h-[100px] shrink-0 flex-col items-center bg-[#174f7a] px-4 pt-4 text-white">
-          <span className="rounded-md bg-white px-2 py-0.5">
-            <img alt="Pelindo" className="h-5 w-auto object-contain" src="/pelindo-logo.png" />
-          </span>
-          <p className="mt-2 text-[8px] font-extrabold uppercase tracking-[0.16em]">PT Pelindo Regional 1 Dumai</p>
-        </header>
-        <div className="-mt-6 flex justify-center">
-          <div className="rounded-[18px] border border-[#d6e0e8] bg-white p-3 shadow-[0_8px_20px_rgba(23,79,122,0.12)]">
-            {qrValue ? <QRCodeSVG aria-label={`QR absensi ${participant.name || 'peserta'}`} bgColor="#ffffff" fgColor="#183b59" level="M" size={160} value={qrValue} /> : <p className="grid h-40 w-40 place-items-center text-xs text-[#757c83]">Kode peserta tidak tersedia</p>}
+      <div className="relative flex h-full flex-col overflow-hidden rounded-[24px] border border-[#91aeca]/60 bg-[#08284d] text-center text-white shadow-[0_18px_38px_rgba(20,53,87,0.28)] print:rounded-none print:border-0 print:shadow-none">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(91,157,214,.35),transparent_28%),linear-gradient(145deg,#164e7f_0%,#082b53_48%,#06172f_100%)]" />
+        <header className="relative z-10 px-5 pt-5">
+          <div className="flex h-[48px] items-center justify-center rounded-[15px] bg-white px-3.5 shadow-[0_8px_24px_rgba(4,31,62,0.20)]">
+            <div className="flex items-center gap-2">
+              <img alt="Danantara" className="h-6 w-[84px] object-contain" src="/danantara-logo.png" />
+              <img alt="Pelindo" className="h-6 w-[84px] object-contain" src="/pelindo-logo.png" />
+            </div>
           </div>
+        </header>
+        <div className="relative z-10 mt-8 flex flex-1 flex-col items-center px-5">
+          <div className="rounded-[22px] border border-white/35 bg-white p-3 shadow-[0_12px_28px_rgba(3,20,42,0.28)]">
+            {qrValue ? <QRCodeSVG aria-label={`QR absensi ${participant.name || 'peserta'}`} bgColor="#ffffff" fgColor="#183b59" level="M" size={150} value={qrValue} /> : <p className="grid h-[150px] w-[150px] place-items-center text-xs text-[#757c83]">Kode peserta tidak tersedia</p>}
+          </div>
+          <p className="mt-4 text-[8px] font-extrabold uppercase tracking-[0.24em] text-[#dcecff]">QR Absensi Peserta</p>
+          <div className="mt-3 w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 font-mono text-[9px] font-bold text-white backdrop-blur-sm">
+            {participant.participantCode || participant.id || 'Kode peserta'}
+          </div>
+          <p className="mx-auto mt-auto max-w-[230px] px-2 pb-5 pt-4 text-[8px] leading-[1.55] text-[#b8c8d8]">QR berisi kode peserta. Pemindaian membantu pencarian data absensi peserta.</p>
         </div>
-        <p className="mt-3 text-[8px] font-black uppercase tracking-[0.2em] text-[#39739d]">QR Absensi Peserta</p>
-        <div className="mx-5 mt-3 rounded-xl bg-[#eaf2f8] px-3 py-2 font-mono text-[9px] font-bold text-[#174f7a]">
-          {participant.participantCode || participant.id || 'Kode peserta'}
-        </div>
-        <p className="mx-auto mt-auto max-w-[220px] px-5 pb-5 pt-3 text-[9px] leading-[1.45] text-[#647b8d]">QR berisi kode peserta saja. Pemindaian membantu pencarian data, bukan verifikasi identitas pemegang kartu.</p>
       </div>
     </div>
   )
