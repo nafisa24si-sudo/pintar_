@@ -81,9 +81,14 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
   const todayAttendance = attendanceRecords.filter((record) => record.date === todayDate)
   const activeIdentifiers = new Set(activeParticipants.map(getParticipantIdentifier))
   const todayActiveRecords = todayAttendance.filter((record) => activeIdentifiers.has(record.participantIdentifier))
-  const todayApprovedLeave = leaveRequests.filter((request) => (
-    request.date === todayDate && request.status === 'approved' && activeIdentifiers.has(request.participantIdentifier)
+  const todayApprovedRequests = leaveRequests.filter((request) => (
+    request.date <= todayDate
+    && (request.endDate || request.date) >= todayDate
+    && request.status === 'approved'
+    && activeIdentifiers.has(request.participantIdentifier)
   ))
+  const todayApprovedLeave = todayApprovedRequests.filter((request) => request.type !== 'sakit')
+  const todayApprovedSick = todayApprovedRequests.filter((request) => request.type === 'sakit')
   const todayStatuses = activeParticipants.map((participant) => ({
     participant,
     status: getParticipantDayStatus(participant, attendanceRecords, leaveRequests),
@@ -385,6 +390,7 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
                   ['Hadir hari ini', todayActiveRecords.length, `${todayOnTime} tepat waktu`],
                   ['Terlambat', todayLate, 'Termasuk yang belum absen lewat batas'],
                   ['Izin', todayApprovedLeave.length, 'Izin disetujui admin'],
+                  ['Sakit', todayApprovedSick.length, 'Sakit disetujui admin'],
                   ['Belum absen', todayNotCheckedIn, 'Belum ada catatan hari ini'],
                 ].map(([label, value, detail]) => (
                   <div className="rounded-xl border border-[#e4e8eb] bg-[#f9fbfc] p-4" key={label}>

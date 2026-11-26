@@ -190,20 +190,23 @@ export function recordAttendance(participant, {
 
 export function createLeaveRequest(participant, {
   date,
+  endDate = date,
+  type = 'izin',
   reason,
   evidence = '',
   timestamp = new Date(),
   storage = globalThis.localStorage,
 } = {}) {
   const participantIdentifier = getParticipantIdentifier(participant)
-  if (!participantIdentifier || !date || !reason?.trim() || !storage) {
+  if (!participantIdentifier || !date || !endDate || endDate < date || !['izin', 'sakit'].includes(type) || !reason?.trim() || !storage) {
     return { ok: false, reason: 'invalid-request' }
   }
 
   const requests = readLeaveRequests(storage)
   const duplicate = requests.some((request) => (
     request.participantIdentifier === participantIdentifier
-    && request.date === date
+    && request.date <= endDate
+    && (request.endDate || request.date) >= date
     && request.status !== 'rejected'
   ))
   if (duplicate) return { ok: false, reason: 'duplicate' }
@@ -213,7 +216,9 @@ export function createLeaveRequest(participant, {
     participantIdentifier,
     participantCode: participant.participantCode || '',
     participantName: participant.name || '',
+    type,
     date,
+    endDate,
     reason: reason.trim(),
     evidence,
     status: 'pending',
@@ -250,6 +255,23 @@ export function markAttendanceAlertReviewed(alertId, storage = globalThis.localS
   return saveList(storage, ATTENDANCE_ALERT_STORAGE_KEY, updatedAlerts)
 }
 
+function getWeekdayDates(start, end) {
+  const firstDay = new Date(`${start}T12:00:00`)
+  const lastDay = new Date(`${end}T12:00:00`)
+  if (Number.isNaN(firstDay.getTime()) || Number.isNaN(lastDay.getTime()) || firstDay > lastDay) return []
+
+  const dates = []
+  for (const cursor = new Date(firstDay); cursor <= lastDay; cursor.setDate(cursor.getDate() + 1)) {
+    if (cursor.getDay() !== 0 && cursor.getDay() !== 6) {
+      const year = cursor.getFullYear()
+      const month = String(cursor.getMonth() + 1).padStart(2, '0')
+      const day = String(cursor.getDate()).padStart(2, '0')
+      dates.push(`${year}-${month}-${day}`)
+    }
+  }
+  return dates
+}
+
 export function getParticipantAttendanceSummary(participant, records, leaveRequests, now = new Date()) {
   const identifier = getParticipantIdentifier(participant)
   const participantRecords = records.filter((record) => record.participantIdentifier === identifier)
@@ -258,7 +280,14 @@ export function getParticipantAttendanceSummary(participant, records, leaveReque
   ))
   const onTime = participantRecords.filter((record) => record.status === 'on-time').length
   const late = participantRecords.filter((record) => record.status === 'late' || record.status === 'recorded').length
-  const approvedLeaveDates = new Set(participantLeaves.map((request) => request.date))
+  const approvedLeaveDates = new Set()
+  const approvedSickDates = new Set()
+  participantLeaves.forEach((request) => {
+    getWeekdayDates(request.date, request.endDate || request.date).forEach((date) => {
+      approvedLeaveDates.add(date)
+      if (request.type === 'sakit') approvedSickDates.add(date)
+    })
+  })
   const start = participant.startDate || participantRecords.map((record) => record.date).sort()[0] || formatLocalDate(now)
   const end = participant.endDate && participant.endDate < formatLocalDate(now) ? participant.endDate : formatLocalDate(now)
   const startDate = new Date(`${start}T12:00:00`)
@@ -281,6 +310,7 @@ export function getParticipantAttendanceSummary(participant, records, leaveReque
     onTime,
     late,
     leaveDays,
+    sickDays: approvedSickDates.size,
     absent: Math.max(scheduledDays - attendedDays - leaveDays, 0),
     attendancePercent: eligibleDays ? Math.round((attendedDays / eligibleDays) * 100) : 0,
   }
@@ -293,9 +323,12 @@ export function getParticipantDayStatus(participant, records, leaveRequests, dat
   if (record) return record.status === 'on-time' ? 'hadir-tepat-waktu' : 'terlambat'
 
   const leave = leaveRequests.find((request) => (
-    request.participantIdentifier === identifier && request.date === dateKey && request.status === 'approved'
+    request.participantIdentifier === identifier
+    && request.date <= dateKey
+    && (request.endDate || request.date) >= dateKey
+    && request.status === 'approved'
   ))
-  if (leave) return 'izin'
+  if (leave) return leave.type === 'sakit' ? 'sakit' : 'izin'
 
   const schedule = getAttendanceSchedule(date)
   if (!schedule) return 'non-working-day'

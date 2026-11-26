@@ -13,9 +13,11 @@ import { IdCardPage } from './components/IdCardPage'
 import { CertificatePage } from './components/CertificatePage'
 import { CertificateDirectory } from './components/CertificateDirectory'
 import { AttendancePage } from './components/AttendancePage'
-import { ParticipantAttendancePortal } from './components/ParticipantAttendancePortal'
 import { AttendanceReminder } from './components/AttendanceReminder'
 import { isCertificateAvailable } from './components/certificateUtils'
+import { ParticipantLogin } from './components/ParticipantLogin'
+import { ParticipantPage } from './components/ParticipantPage'
+import { participantSessionStorageKey } from './components/participantAuth'
 
 const homeSections = [
   { label: 'Peserta Terdata', id: 'peserta-terdata' },
@@ -34,6 +36,16 @@ const generateParticipantCode = (existingParticipants = []) => {
   return `MAGANG-${currentYear}-${String(nextNumber).padStart(3, '0')}`
 }
 
+function readParticipantSession() {
+  try {
+    const savedSession = window.sessionStorage.getItem(participantSessionStorageKey)
+    const session = savedSession ? JSON.parse(savedSession) : null
+    return session?.role === 'participant' && typeof session.participantId === 'string' ? session : null
+  } catch {
+    return null
+  }
+}
+
 function App() {
   const [participants, setParticipants] = useState(() => {
     try {
@@ -43,13 +55,43 @@ function App() {
       return []
     }
   })
-  const [page, setPage] = useState(() => (
-    new URLSearchParams(window.location.search).get('daftar') === 'magang'
+  const [participantSession, setParticipantSession] = useState(readParticipantSession)
+  const [page, setPage] = useState(() => {
+    const path = window.location.pathname
+    const cardRouteMatch = path.match(/^\/id-card\/(.+)$/)
+    if (participantSession && !cardRouteMatch) {
+      window.history.replaceState({}, '', '/peserta')
+      return 'participant'
+    }
+    if (path === '/login') return 'participant-login'
+    if (path === '/peserta') {
+      if (participantSession) return 'participant'
+      window.history.replaceState({}, '', '/login')
+      return 'participant-login'
+    }
+    if (path === '/admin') {
+      return 'admin'
+    }
+    if (cardRouteMatch) {
+      const code = decodeURIComponent(path.slice('/id-card/'.length))
+      const cardParticipant = participants.find((participant) => participant.participantCode === code)
+      if (participantSession && cardParticipant?.id !== participantSession.participantId) {
+        window.history.replaceState({}, '', '/peserta')
+        return 'participant'
+      }
+      return cardParticipant ? 'id-card' : 'id-card-not-found'
+    }
+    return new URLSearchParams(window.location.search).get('daftar') === 'magang'
       ? 'form'
       : new URLSearchParams(window.location.search).get('admin') === 'true' ? 'admin-login' : 'welcome'
-  ))
+  })
   const [adminAuthenticated, setAdminAuthenticated] = useState(false)
-  const [selectedParticipant, setSelectedParticipant] = useState(null)
+  const [selectedParticipant, setSelectedParticipant] = useState(() => {
+    const routeMatch = window.location.pathname.match(/^\/id-card\/(.+)$/)
+    if (!routeMatch) return null
+    const code = decodeURIComponent(routeMatch[1])
+    return participants.find((participant) => participant.participantCode === code) || { participantCode: code, notFound: true }
+  })
   const [certificateReturnPage, setCertificateReturnPage] = useState('detail')
   const [certificateAutoPrint, setCertificateAutoPrint] = useState(false)
   const [participantsOpenedFromAdmin, setParticipantsOpenedFromAdmin] = useState(false)
@@ -63,20 +105,51 @@ function App() {
   }, [participants])
 
   useEffect(() => {
-    const routeMatch = window.location.pathname.match(/^\/id-card\/(.+)$/)
-    if (!routeMatch) return
-
-    const code = decodeURIComponent(routeMatch[1])
-    const matchParticipant = participants.find((participant) => participant.participantCode === code)
-
-    if (matchParticipant) {
-      setSelectedParticipant(matchParticipant)
-      setPage('id-card')
-      return
+    const handlePopState = () => {
+      const { pathname, search } = window.location
+      if (pathname === '/login') {
+        if (readParticipantSession()) {
+          window.history.replaceState({}, '', '/peserta')
+          setPage('participant')
+        } else {
+          setPage('participant-login')
+        }
+      } else if (pathname === '/peserta') {
+        setPage(readParticipantSession() ? 'participant' : 'participant-login')
+        if (!readParticipantSession()) window.history.replaceState({}, '', '/login')
+      } else if (pathname === '/admin') {
+        if (readParticipantSession()) {
+          window.history.replaceState({}, '', '/peserta')
+          setPage('participant')
+        } else {
+          setPage('admin')
+        }
+      } else if (pathname === '/') {
+        if (readParticipantSession()) {
+          window.history.replaceState({}, '', '/peserta')
+          setPage('participant')
+        } else {
+          const params = new URLSearchParams(search)
+          setPage(params.get('daftar') === 'magang' ? 'form' : params.get('admin') === 'true' ? 'admin-login' : 'welcome')
+        }
+      } else {
+        const routeMatch = pathname.match(/^\/id-card\/(.+)$/)
+        if (!routeMatch) return
+        const code = decodeURIComponent(routeMatch[1])
+        const matchParticipant = participants.find((participant) => participant.participantCode === code)
+        const session = readParticipantSession()
+        if (session && matchParticipant?.id !== session.participantId) {
+          window.history.replaceState({}, '', '/peserta')
+          setPage('participant')
+          return
+        }
+        setSelectedParticipant(matchParticipant || { participantCode: code, notFound: true })
+        setPage(matchParticipant ? 'id-card' : 'id-card-not-found')
+      }
     }
 
-    setSelectedParticipant({ participantCode: code, notFound: true })
-    setPage('id-card-not-found')
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
   }, [participants])
 
   useEffect(() => {
@@ -139,6 +212,11 @@ function App() {
   }
 
   const scrollToHomeSection = (sectionId) => {
+    if (participantSession) {
+      window.history.pushState({}, '', '/peserta')
+      setPage('participant')
+      return
+    }
     setAdminAuthenticated(false)
     setHomeDropdownOpen(false)
     setMobileMenuOpen(false)
@@ -151,6 +229,11 @@ function App() {
   }
 
   const navigateToHome = () => {
+    if (participantSession) {
+      window.history.pushState({}, '', '/peserta')
+      setPage('participant')
+      return
+    }
     window.history.pushState({}, '', '/')
     setAdminAuthenticated(false)
     setSelectedParticipant(null)
@@ -163,6 +246,56 @@ function App() {
     }
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
+  const openParticipantLogin = () => {
+    if (participantSession) {
+      window.history.pushState({}, '', '/peserta')
+      setPage('participant')
+      return
+    }
+    setAdminAuthenticated(false)
+    window.history.pushState({}, '', '/login')
+    setPage('participant-login')
+  }
+
+  const openAdmin = () => {
+    if (participantSession) {
+      window.history.pushState({}, '', '/peserta')
+      setPage('participant')
+      return
+    }
+    window.history.pushState({}, '', '/admin')
+    setPage(adminAuthenticated ? 'admin' : 'admin-login')
+  }
+
+  const startParticipantSession = (participant) => {
+    const nextSession = { role: 'participant', participantId: participant.id }
+    try {
+      window.sessionStorage.setItem(participantSessionStorageKey, JSON.stringify(nextSession))
+    } catch (error) {
+      throw new Error(`Sesi gagal disimpan di browser: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    setAdminAuthenticated(false)
+    setParticipantSession(nextSession)
+    window.history.pushState({}, '', '/peserta')
+    setPage('participant')
+  }
+
+  const logoutParticipant = () => {
+    let storageError = null
+    try {
+      window.sessionStorage.removeItem(participantSessionStorageKey)
+    } catch (error) {
+      storageError = error
+    }
+    setParticipantSession(null)
+    setAdminAuthenticated(false)
+    window.history.pushState({}, '', '/login')
+    setPage('participant-login')
+    if (storageError) window.alert('Sesi tidak dapat dihapus dari penyimpanan browser. Tutup tab ini dan bersihkan data situs sebelum menggunakan perangkat bersama.')
+  }
+
+  const activeParticipant = participants.find((participant) => participant.id === participantSession?.participantId) || null
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#f3f4f6] text-[#222c35]">
@@ -193,16 +326,19 @@ function App() {
               )}
             </AnimatePresence>
           </div>
-          <button aria-label="Buka halaman absensi" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); setPage(adminAuthenticated ? 'attendance' : 'attendance-login') }} type="button">
+          <button aria-label="Buka halaman absensi" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); if (participantSession) { setPage('participant'); window.history.pushState({}, '', '/peserta') } else setPage(adminAuthenticated ? 'attendance' : 'attendance-login') }} type="button">
             <ClipboardCheck size={16} /> Absensi
           </button>
-          <button aria-label="Buka portal absensi peserta" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); setPage('participant-attendance') }} type="button">
+          <button aria-label="Buka portal peserta" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); openParticipantLogin() }} type="button">
             <CalendarCheck2 size={16} /> Portal peserta
           </button>
-          <button aria-label="Buka halaman admin" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); setPage('admin') }} type="button">
+          <button aria-label="Buka halaman admin" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); openAdmin() }} type="button">
             <Users size={16} /> Admin
           </button>
-          <button aria-label="Buka halaman sertifikat" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); setPage('certificates') }} type="button">
+          <button aria-label="Masuk sebagai peserta" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); openParticipantLogin() }} type="button">
+            <Users size={16} /> Peserta
+          </button>
+          <button aria-label="Buka halaman sertifikat" className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center" onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); if (participantSession) { window.history.pushState({}, '', '/peserta'); setPage('participant') } else setPage('certificates') }} type="button">
             <Award size={16} /> Sertifikat
           </button>
           <AttendanceReminder />
@@ -213,17 +349,27 @@ function App() {
 
       {page === 'attendance' && <section className="page-shell max-w-7xl"><AttendancePage participants={participants} /></section>}
 
-      {page === 'participant-attendance' && <ParticipantAttendancePortal participants={participants} />}
+      {page === 'participant-login' && <ParticipantLogin onAdminLogin={openAdmin} onBack={navigateToHome} onLogin={startParticipantSession} participants={participants} />}
 
-      {page === 'attendance-login' && <AdminLogin onBack={() => setPage('welcome')} onLogin={() => { setAdminAuthenticated(true); setPage('attendance') }} />}
-
-      {page === 'admin' && (
-        adminAuthenticated
-          ? <AdminPage participants={participants} onBack={() => { setAdminAuthenticated(false); setPage('welcome') }} onOpenParticipants={() => { setParticipantsOpenedFromAdmin(true); setPage('participants') }} onUpdateParticipant={updateParticipant} onAdd={() => { setAdminAuthenticated(false); setPage('form') }} onLogout={() => { setAdminAuthenticated(false); setPage('welcome') }} />
-          : <AdminLogin onBack={() => setPage('welcome')} onLogin={() => { setAdminAuthenticated(true); setPage('admin') }} />
+      {page === 'participant' && (
+        activeParticipant
+          ? <ParticipantPage onLogout={logoutParticipant} participant={activeParticipant} />
+          : <ParticipantLogin onAdminLogin={openAdmin} onBack={navigateToHome} onLogin={startParticipantSession} participants={participants} />
       )}
 
-      {page === 'admin-login' && <AdminLogin onBack={() => setPage('welcome')} onLogin={() => { setAdminAuthenticated(true); setPage('admin') }} />}
+      {page === 'attendance-login' && <AdminLogin onBack={navigateToHome} onLogin={() => { setAdminAuthenticated(true); setPage('attendance') }} />}
+
+      {page === 'admin' && (
+        participantSession
+          ? activeParticipant
+            ? <ParticipantPage onLogout={logoutParticipant} participant={activeParticipant} />
+            : <ParticipantLogin onAdminLogin={openAdmin} onBack={navigateToHome} onLogin={startParticipantSession} participants={participants} />
+          : adminAuthenticated
+          ? <AdminPage participants={participants} onBack={() => { setAdminAuthenticated(false); navigateToHome() }} onOpenParticipants={() => { setParticipantsOpenedFromAdmin(true); setPage('participants') }} onUpdateParticipant={updateParticipant} onAdd={() => { setAdminAuthenticated(false); navigateToHome(); setPage('form') }} onLogout={() => { setAdminAuthenticated(false); navigateToHome() }} />
+          : <AdminLogin onBack={navigateToHome} onLogin={() => { setAdminAuthenticated(true); window.history.pushState({}, '', '/admin'); setPage('admin') }} />
+      )}
+
+      {page === 'admin-login' && <AdminLogin onBack={navigateToHome} onLogin={() => { setAdminAuthenticated(true); window.history.pushState({}, '', '/admin'); setPage('admin') }} />}
 
       {page === 'form' && (
         <section className="page-shell max-w-3xl">

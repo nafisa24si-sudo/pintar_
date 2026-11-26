@@ -25,6 +25,7 @@ const attendanceStatusLabels = {
   late: 'Terlambat',
   'belum-absen': 'Belum absen',
   izin: 'Izin',
+  sakit: 'Sakit',
   'tidak-hadir': 'Tidak hadir',
   'non-working-day': 'Hari libur',
 }
@@ -449,16 +450,16 @@ export function AttendancePage({ participants }) {
         <section className="space-y-3">
           <div className="rounded-xl border border-[#cbd9e6] bg-[#edf4fa] p-4 text-sm text-[#34516c]">
             <h2 className="font-extrabold">Persetujuan izin</h2>
-            <p className="mt-1 text-xs leading-5">Permohonan yang disetujui mengubah status harian menjadi Izin dan dikecualikan dari persentase hari kerja.</p>
+            <p className="mt-1 text-xs leading-5">Permohonan yang disetujui mengubah status harian menjadi Izin atau Sakit dan dikecualikan dari persentase hari kerja.</p>
           </div>
           {leaveRequests.length ? [...leaveRequests].sort((a, b) => b.submittedAt.localeCompare(a.submittedAt)).map((request) => (
             <article className="rounded-xl border border-[#dde1e5] bg-white p-4" key={request.id}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="font-extrabold text-[#222c35]">{request.participantName || request.participantCode} <span className="font-semibold text-[#75808a]">· {request.date}</span></p>
+                  <p className="font-extrabold text-[#222c35]">{request.participantName || request.participantCode} <span className="font-semibold capitalize text-[#75808a]">· {request.type || 'izin'} · {request.date}{request.endDate && request.endDate !== request.date ? ` – ${request.endDate}` : ''}</span></p>
                   <p className="mt-1 text-sm text-[#526a81]">{request.reason}</p>
                   <p className="mt-1 text-xs text-[#838a91]">Diajukan {formatDateTime(request.submittedAt)}</p>
-                  {request.evidence && <a className="mt-2 inline-flex text-xs font-bold text-[#2f5a84] underline" download={`bukti-izin-${request.date}`} href={request.evidence} rel="noreferrer" target="_blank">Lihat / unduh bukti</a>}
+                  {request.evidence && <a className="mt-2 inline-flex text-xs font-bold text-[#2f5a84] underline" download={`bukti-${request.type || 'izin'}-${request.date}`} href={request.evidence} rel="noreferrer" target="_blank">Lihat / unduh bukti</a>}
                   {request.reviewNote && <p className="mt-2 text-xs text-[#75808a]">Catatan admin: {request.reviewNote}</p>}
                 </div>
                 <div className="flex items-center gap-2">
