@@ -51,13 +51,10 @@ function findParticipantByEmail(participants, email) {
 
 export async function activateParticipantAccount(participants, {
   email,
-  participantCode,
   password,
 }) {
   const participant = findParticipantByEmail(participants, email)
-  if (!participant || String(participant.participantCode || '').trim().toLowerCase() !== String(participantCode || '').trim().toLowerCase()) {
-    throw new Error('Email atau kode peserta tidak cocok dengan data peserta.')
-  }
+  if (!participant) throw new Error('Email belum terdaftar pada data peserta.')
   if (!participant.id) throw new Error('Data peserta tidak memiliki ID yang valid. Hubungi admin.')
 
   const credentials = readCredentials()
@@ -78,7 +75,7 @@ export async function authenticateParticipant(participants, { email, password })
 
   const credentials = readCredentials()
   const credential = credentials[participant.id]
-  if (!credential) throw new Error('Akun belum diaktifkan. Gunakan “Aktifkan akun” dengan email dan kode peserta.')
+  if (!credential) throw new Error('Akun belum dibuat. Pilih “Aktifkan akun” terlebih dahulu.')
 
   const passwordHash = await hashPassword(password, hexToBytes(credential.salt))
   if (credential.passwordHash !== passwordHash) {
