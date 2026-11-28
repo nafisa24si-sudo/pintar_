@@ -3,7 +3,6 @@ import { Activity, Award, ArrowLeft, ArrowRight, BadgeCheck, Building2, Calendar
 import { CertificateDirectory } from './CertificateDirectory'
 import { CertificatePage } from './CertificatePage'
 import { isCertificateAvailable } from './certificateUtils'
-import { AttendancePage } from './AttendancePage'
 import {
   formatLocalDate,
   getParticipantAttendanceSummary,
@@ -11,6 +10,7 @@ import {
   getParticipantIdentifier,
   readAttendanceRecords,
   readLeaveRequests,
+  reviewLeaveRequest,
 } from './attendanceUtils'
 import { createParticipantReportXlsx } from './participantReportUtils'
 import { IdCardFrame } from './IdCardPage'
@@ -593,7 +593,146 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
           </>
         )}
 
-        {activeSection === 'attendance' && <AttendancePage participants={participants} />}
+        {activeSection === 'attendance' && (
+          <section className="space-y-6">
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[#2f5a84]">
+                <ClipboardCheck size={15} /> Administrasi kehadiran
+              </div>
+              <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-[#1f2830] sm:text-4xl">Pengajuan Izin & Sakit</h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[#757c83]">
+                Kelola permohonan izin dan sakit dari peserta magang. Permohonan yang disetujui akan mengubah status kehadiran harian peserta.
+              </p>
+            </div>
+
+            {/* Stats row */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                { label: 'Menunggu', value: leaveRequests.filter((r) => r.status === 'pending').length, color: 'bg-[#fff9e9] border-[#f1d8a8] text-[#765b24]' },
+                { label: 'Disetujui', value: leaveRequests.filter((r) => r.status === 'approved').length, color: 'bg-[#e8f5ed] border-[#b5d6c4] text-[#286344]' },
+                { label: 'Ditolak', value: leaveRequests.filter((r) => r.status === 'rejected').length, color: 'bg-[#fff1ed] border-[#f8c4bb] text-[#a74636]' },
+              ].map(({ label, value, color }) => (
+                <div className={`rounded-xl border p-4 ${color}`} key={label}>
+                  <p className="text-xs font-bold uppercase tracking-[0.1em] opacity-70">{label}</p>
+                  <strong className="mt-1 block text-3xl font-extrabold">{value}</strong>
+                </div>
+              ))}
+            </div>
+
+            {/* Leave requests list */}
+            <div className="overflow-hidden rounded-2xl border border-[#dde1e5] bg-white shadow-sm">
+              <div className="border-b border-[#eceef0] px-5 py-4">
+                <h2 className="font-extrabold text-[#222c35]">Daftar Pengajuan</h2>
+                <p className="mt-1 text-xs text-[#838a91]">Klik Setujui atau Tolak untuk memproses pengajuan yang masih menunggu.</p>
+              </div>
+
+              {leaveRequests.length === 0 ? (
+                <div className="px-5 py-12 text-center text-sm text-[#828991]">
+                  Belum ada pengajuan izin atau sakit dari peserta.
+                </div>
+              ) : (
+                <div className="divide-y divide-[#eceef0]">
+                  {[...leaveRequests]
+                    .sort((a, b) => {
+                      // pending first, then by submission date desc
+                      if (a.status === 'pending' && b.status !== 'pending') return -1
+                      if (a.status !== 'pending' && b.status === 'pending') return 1
+                      return b.submittedAt.localeCompare(a.submittedAt)
+                    })
+                    .map((request) => {
+                      const statusConfig = {
+                        pending: { label: 'Menunggu', cls: 'bg-[#fff7df] text-[#8a6a20]' },
+                        approved: { label: 'Disetujui', cls: 'bg-[#e8f5ed] text-[#286344]' },
+                        rejected: { label: 'Ditolak', cls: 'bg-[#fff1ed] text-[#a74636]' },
+                      }
+                      const { label: statusLabel, cls: statusCls } = statusConfig[request.status] || statusConfig.pending
+
+                      const formatDate = (val) => {
+                        const d = new Date(`${val}T12:00:00`)
+                        return Number.isNaN(d.getTime()) ? val : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                      }
+                      const formatSubmit = (val) => {
+                        const d = new Date(val)
+                        return Number.isNaN(d.getTime()) ? val : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(d)
+                      }
+
+                      const dateRange = request.endDate && request.endDate !== request.date
+                        ? `${formatDate(request.date)} – ${formatDate(request.endDate)}`
+                        : formatDate(request.date)
+
+                      return (
+                        <article className="px-5 py-4" key={request.id}>
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-extrabold text-[#222c35]">{request.participantName || request.participantCode || '-'}</p>
+                                <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${request.type === 'sakit' ? 'bg-[#fce8e3] text-[#8a4030]' : 'bg-[#dbe7f3] text-[#2d4f70]'}`}>
+                                  {request.type === 'sakit' ? 'Sakit' : 'Izin'}
+                                </span>
+                                <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${statusCls}`}>{statusLabel}</span>
+                              </div>
+
+                              <div className="mt-2 grid gap-1 text-sm text-[#526a81] sm:grid-cols-2">
+                                <p><span className="font-bold text-[#75808a]">Tanggal:</span> {dateRange}</p>
+                                <p><span className="font-bold text-[#75808a]">Diajukan:</span> {formatSubmit(request.submittedAt)}</p>
+                              </div>
+
+                              <p className="mt-2 text-sm text-[#303e4c]">
+                                <span className="font-bold text-[#75808a]">Alasan:</span> {request.reason}
+                              </p>
+
+                              {request.evidence && (
+                                <a
+                                  className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#2f5a84] underline"
+                                  download={`bukti-${request.type}-${request.date}`}
+                                  href={request.evidence}
+                                  rel="noreferrer"
+                                  target="_blank"
+                                >
+                                  Lihat bukti lampiran
+                                </a>
+                              )}
+
+                              {request.reviewNote && (
+                                <p className="mt-2 text-xs text-[#838a91]">
+                                  <span className="font-bold">Catatan admin:</span> {request.reviewNote}
+                                </p>
+                              )}
+                            </div>
+
+                            {request.status === 'pending' && (
+                              <div className="flex shrink-0 gap-2">
+                                <button
+                                  className="rounded-lg bg-[#e7f3ed] px-4 py-2 text-sm font-bold text-[#286344] transition hover:bg-[#d0e9d8]"
+                                  onClick={() => {
+                                    reviewLeaveRequest(request.id, 'approved')
+                                    setLeaveRequests(readLeaveRequests())
+                                  }}
+                                  type="button"
+                                >
+                                  Setujui
+                                </button>
+                                <button
+                                  className="rounded-lg bg-[#fff1ed] px-4 py-2 text-sm font-bold text-[#a74636] transition hover:bg-[#f8ded7]"
+                                  onClick={() => {
+                                    reviewLeaveRequest(request.id, 'rejected')
+                                    setLeaveRequests(readLeaveRequests())
+                                  }}
+                                  type="button"
+                                >
+                                  Tolak
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </article>
+                      )
+                    })}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {activeSection === 'reports' && (
           <div className="space-y-6">

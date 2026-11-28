@@ -162,13 +162,38 @@ export function recordAttendance(participant, {
 
   const records = readAttendanceRecords(storage)
   const date = formatLocalDate(timestamp)
-  const duplicate = records.some((record) => (
+
+  // Check existing records for this participant today
+  const todayRecords = records.filter((record) => (
     record.participantIdentifier === participantIdentifier
     && record.date === date
-    && record.type === ATTENDANCE_TYPE
   ))
 
-  if (duplicate) return { ok: false, reason: 'duplicate' }
+  const hasCheckIn = todayRecords.some((r) => r.type === 'check-in')
+  const hasCheckOut = todayRecords.some((r) => r.type === 'check-out')
+
+  // Determine scan type
+  let scanType
+  if (!hasCheckIn) {
+    scanType = 'check-in'
+  } else if (!hasCheckOut) {
+    scanType = 'check-out'
+  } else {
+    // Both already recorded
+    return { ok: false, reason: 'duplicate' }
+  }
+
+  // For check-out, calculate work duration
+  let workMinutes = null
+  if (scanType === 'check-out' && hasCheckIn) {
+    const checkInRecord = todayRecords.find((r) => r.type === 'check-in')
+    if (checkInRecord?.scannedAt) {
+      const checkInTime = new Date(checkInRecord.scannedAt)
+      workMinutes = Math.round((timestamp.getTime() - checkInTime.getTime()) / 60000)
+    }
+  }
+
+  const timingStatus = scanType === 'check-in' ? getAttendanceTimingStatus(timestamp) : 'check-out'
 
   const record = {
     id: globalThis.crypto?.randomUUID?.() || `${timestamp.getTime()}-${Math.random().toString(36).slice(2)}`,
@@ -177,16 +202,17 @@ export function recordAttendance(participant, {
     participantCode: participant.participantCode || '',
     date,
     scannedAt: timestamp.toISOString(),
-    type: ATTENDANCE_TYPE,
-    status: getAttendanceTimingStatus(timestamp),
+    type: scanType,
+    status: timingStatus,
     source,
     distanceMeters: Number.isFinite(distanceMeters) ? Math.ceil(distanceMeters) : null,
+    workMinutes,
   }
 
   if (!saveList(storage, ATTENDANCE_STORAGE_KEY, [...records, record])) {
     return { ok: false, reason: 'storage-unavailable' }
   }
-  return { ok: true, record }
+  return { ok: true, record, scanType, workMinutes }
 }
 
 export function createLeaveRequest(participant, {
@@ -334,5 +360,7 @@ export function getParticipantDayStatus(participant, records, leaveRequests, dat
   const schedule = getAttendanceSchedule(date)
   if (!schedule) return 'non-working-day'
   if (dateKey < formatLocalDate(new Date())) return 'tidak-hadir'
+  const parts = getJakartaDateTimeParts(date)
+  if (Number(parts.hour) * 60 + Number(parts.minute) > schedule.startMinute) return 'terlambat'
   return 'belum-absen'
 }

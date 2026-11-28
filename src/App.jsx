@@ -13,7 +13,6 @@ import { IdCardPage } from './components/IdCardPage'
 import { CertificatePage } from './components/CertificatePage'
 import { CertificateDirectory } from './components/CertificateDirectory'
 import { AttendancePage } from './components/AttendancePage'
-import { AttendanceReminder } from './components/AttendanceReminder'
 import { isCertificateAvailable } from './components/certificateUtils'
 import { ParticipantLogin } from './components/ParticipantLogin'
 import { ParticipantPage } from './components/ParticipantPage'
@@ -437,16 +436,16 @@ function App() {
         <header className={`${headerBase} ${headerScroll}`}>
           <BrandMark />
           <div className="flex items-center gap-3">
-            <span className="hidden rounded-full border border-[#dce3ea] bg-white px-3 py-1.5 text-xs font-bold text-[#2f5a84] sm:inline-flex items-center gap-1.5">
-              <ClipboardCheck size={13} /> Area Absensi
+            <span className="hidden items-center gap-1.5 rounded-full border border-[#c8d8e4] bg-[#e8f1f8] px-3 py-1.5 text-xs font-bold text-[#2f5a84] sm:inline-flex">
+              <ClipboardCheck size={13} /> Absensi
             </span>
             {attendanceAuthenticated && (
               <button
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#556d84] transition hover:bg-[#fff1ed] hover:text-[#b34d3b]"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce4eb] bg-white px-3 py-2 text-xs font-bold text-[#556d84] transition hover:border-[#f8c4bb] hover:bg-[#fff5f3] hover:text-[#b34d3b]"
                 onClick={logoutAttendance}
                 type="button"
               >
-                <LogOut size={15} /> Keluar
+                <LogOut size={14} /> Keluar
               </button>
             )}
           </div>
@@ -454,10 +453,12 @@ function App() {
 
         {(page === 'attendance-login' || !attendanceAuthenticated) && (
           <AdminLogin
-            eyebrow="Area absensi"
+            accentFrom="#0f3d5c"
+            accentTo="#1a6b5a"
+            eyebrow="Area Absensi"
             title="Login Absensi"
-            description="Masuk untuk mengakses pemindaian QR dan pencatatan kehadiran peserta."
-            submitLabel="Masuk ke absensi"
+            description="Masuk untuk memindai QR dan mencatat kehadiran peserta."
+            submitLabel="Masuk ke Absensi"
             onBack={() => {
               window.history.pushState({}, '', '/')
               setAreaAndPage('participant', 'welcome')
@@ -489,16 +490,16 @@ function App() {
         <header className={`${headerBase} ${headerScroll}`}>
           <BrandMark />
           <div className="flex items-center gap-3">
-            <span className="hidden rounded-full border border-[#dce3ea] bg-white px-3 py-1.5 text-xs font-bold text-[#2f5a84] sm:inline-flex items-center gap-1.5">
-              <Users size={13} /> Area Admin
+            <span className="hidden items-center gap-1.5 rounded-full border border-[#c8d8e4] bg-[#e8f1f8] px-3 py-1.5 text-xs font-bold text-[#2f5a84] sm:inline-flex">
+              <Users size={13} /> Admin
             </span>
             {adminAuthenticated && (
               <button
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#556d84] transition hover:bg-[#fff1ed] hover:text-[#b34d3b]"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce4eb] bg-white px-3 py-2 text-xs font-bold text-[#556d84] transition hover:border-[#f8c4bb] hover:bg-[#fff5f3] hover:text-[#b34d3b]"
                 onClick={logoutAdmin}
                 type="button"
               >
-                <LogOut size={15} /> Keluar
+                <LogOut size={14} /> Keluar
               </button>
             )}
           </div>
@@ -638,15 +639,12 @@ function App() {
           {/* Peserta login/portal */}
           <button
             aria-label="Masuk sebagai peserta"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold text-[#556d84] transition hover:bg-[#dbe7f3] hover:text-[#222c35] sm:text-center"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#dce4eb] bg-white px-4 py-2 text-xs font-bold text-[#2f5a84] shadow-sm transition hover:border-[#b8ccdd] hover:bg-[#eaf2f8] sm:text-center"
             onClick={() => { setMobileMenuOpen(false); setHomeDropdownOpen(false); openParticipantLogin() }}
             type="button"
           >
-            <Users size={16} /> Peserta
+            <Users size={15} /> Masuk
           </button>
-
-          {/* Attendance reminder (no-login version for participant area) */}
-          {!participantSession && <AttendanceReminder />}
         </div>
       </header>
 
