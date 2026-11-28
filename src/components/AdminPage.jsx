@@ -30,6 +30,9 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
   const [editData, setEditData] = useState(null)
   const [attendanceRecords, setAttendanceRecords] = useState(() => readAttendanceRecords())
   const [leaveRequests, setLeaveRequests] = useState(() => readLeaveRequests())
+  const [reportsTab, setReportsTab] = useState('participants')
+  const [rekapYear, setRekapYear] = useState(String(new Date().getFullYear()))
+  const [rekapMonth, setRekapMonth] = useState(String(new Date().getMonth()))
 
   useEffect(() => {
     const refreshAttendance = () => {
@@ -51,7 +54,7 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
     { id: 'certificates', label: 'Kelola Sertifikat', icon: Award },
     { id: 'id-card', label: 'Kelola ID Card', icon: IdCard },
     { id: 'attendance', label: 'Absensi', icon: ClipboardCheck },
-    { id: 'reports', label: 'Laporan', icon: FileText },
+    { id: 'reports', label: 'Rekap', icon: FileText },
   ]
 
   const parseDate = (value) => {
@@ -170,6 +173,75 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
 
   const recentParticipants = useMemo(() => [...participants].reverse().slice(0, 5), [participants])
   const idCardProgress = totalParticipants > 0 ? Math.round((idCardAvailable / totalParticipants) * 100) : 0
+
+  // ── Rekap Absensi ─────────────────────────────────────────────────────────
+  const availableYears = useMemo(() => {
+    const years = new Set()
+    attendanceRecords.forEach((r) => { if (r.date) years.add(r.date.slice(0, 4)) })
+    leaveRequests.forEach((r) => { if (r.date) years.add(r.date.slice(0, 4)) })
+    if (!years.size) years.add(String(new Date().getFullYear()))
+    return [...years].sort((a, b) => Number(b) - Number(a))
+  }, [attendanceRecords, leaveRequests])
+
+  const monthlyAttendance = useMemo(() => {
+    const year = Number(rekapYear)
+    const month = Number(rekapMonth)
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const today = formatLocalDate(new Date())
+
+    // Build list of weekday dates in this month
+    const weekdays = []
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d)
+      const dow = date.getDay()
+      if (dow !== 0 && dow !== 6) {
+        weekdays.push({
+          day: d,
+          key: `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+          dow,
+        })
+      }
+    }
+
+    return participants.map((participant) => {
+      const identifier = getParticipantIdentifier(participant)
+      const dayMap = {}
+
+      attendanceRecords
+        .filter((r) => r.participantIdentifier === identifier && r.type === 'check-in')
+        .forEach((r) => {
+          const d = new Date(`${r.date}T12:00:00`)
+          if (d.getFullYear() === year && d.getMonth() === month) {
+            dayMap[r.date] = r.status === 'on-time' ? 'hadir' : 'terlambat'
+          }
+        })
+
+      leaveRequests
+        .filter((r) => r.participantIdentifier === identifier && r.status === 'approved')
+        .forEach((r) => {
+          const start = new Date(`${r.date}T12:00:00`)
+          const end = new Date(`${r.endDate || r.date}T12:00:00`)
+          for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+            const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
+            if (cursor.getFullYear() === year && cursor.getMonth() === month && !dayMap[key]) {
+              dayMap[key] = r.type === 'sakit' ? 'sakit' : 'izin'
+            }
+          }
+        })
+
+      let hadir = 0; let terlambat = 0; let izin = 0; let sakit = 0; let absen = 0
+      weekdays.forEach(({ key }) => {
+        const status = dayMap[key]
+        if (status === 'hadir') hadir++
+        else if (status === 'terlambat') terlambat++
+        else if (status === 'izin') izin++
+        else if (status === 'sakit') sakit++
+        else if (key <= today) absen++
+      })
+
+      return { participant, hadir, terlambat, izin, sakit, absen, dayMap, weekdays }
+    })
+  }, [participants, attendanceRecords, leaveRequests, rekapYear, rekapMonth])
 
   const uniquePeriods = useMemo(() => {
     const periods = participants
@@ -736,68 +808,310 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
 
         {activeSection === 'reports' && (
           <div className="space-y-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[#2f5a84]"><FileText size={15} /> Laporan</div>
-                <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-[#1f2830] sm:text-4xl">Peserta Magang per Tahun</h1>
-                <p className="mt-2 text-sm leading-6 text-[#757c83]">Rekap peserta dikelompokkan berdasarkan tahun mulai magang.</p>
-              </div>
-              <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#222c35] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#303e4c] disabled:cursor-not-allowed disabled:opacity-50" disabled={participants.length === 0} onClick={exportParticipantReport} type="button">
-                <Download size={17} /> Ekspor ke Excel
-              </button>
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[#2f5a84]"><FileText size={15} /> Rekap</div>
+              <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-[#1f2830] sm:text-4xl">Rekap</h1>
             </div>
 
-            {reportExportError && <p className="rounded-xl border border-[#f2c7bd] bg-[#fff1ed] px-4 py-3 text-sm font-semibold text-[#a74636]" role="alert">{reportExportError}</p>}
-
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {annualReportRows.length ? annualReportRows.map(([year, count]) => (
-                <button className={`rounded-2xl border p-5 text-left shadow-[0_10px_22px_rgba(36,51,45,0.04)] transition hover:-translate-y-0.5 ${reportYear === year ? 'border-[#9bb8d3] bg-[#eaf1f7]' : 'border-[#dde1e5] bg-white hover:bg-[#f9fbfc]'}`} key={year} onClick={() => setReportYear(year)} type="button">
-                  <span className="text-sm font-bold text-[#4c6277]">{year}</span>
-                  <strong className="mt-3 block text-3xl font-extrabold tracking-[-0.04em] text-[#222c35]">{count}</strong>
-                  <span className="mt-1 block text-xs text-[#757c83]">peserta</span>
+            {/* Sub-tab pills */}
+            <div className="flex gap-2">
+              {[
+                { id: 'participants', label: 'Peserta per Tahun' },
+                { id: 'attendance', label: 'Rekap Absensi' },
+              ].map(({ id, label }) => (
+                <button
+                  className={`rounded-xl px-4 py-2.5 text-sm font-bold transition ${reportsTab === id ? 'bg-[#222c35] text-white' : 'border border-[#dde1e5] bg-white text-[#556d84] hover:bg-[#f4f7fa]'}`}
+                  key={id}
+                  onClick={() => setReportsTab(id)}
+                  type="button"
+                >
+                  {label}
                 </button>
-              )) : (
-                <div className="rounded-2xl border border-dashed border-[#c8d0d7] bg-white px-5 py-7 text-sm text-[#737a81] sm:col-span-2 xl:col-span-4">Belum ada data peserta magang.</div>
-              )}
+              ))}
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-[#dde1e5] bg-white shadow-[0_10px_22px_rgba(36,51,45,0.04)]">
-              <div className="flex flex-col gap-3 border-b border-[#eceef0] bg-[#f9fbfc] p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-lg font-extrabold text-[#222c35]">Data Peserta</h2>
-                  <p className="mt-1 text-xs text-[#757c83]">{reportedParticipants.length} peserta</p>
+            {/* ── Tab: Peserta per Tahun ── */}
+            {reportsTab === 'participants' && (
+              <div className="space-y-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 className="text-2xl font-extrabold tracking-[-0.04em] text-[#1f2830]">Peserta Magang per Tahun</h2>
+                    <p className="mt-1 text-sm text-[#757c83]">Rekap peserta dikelompokkan berdasarkan tahun mulai magang.</p>
+                  </div>
+                  <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#222c35] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#303e4c] disabled:cursor-not-allowed disabled:opacity-50" disabled={participants.length === 0} onClick={exportParticipantReport} type="button">
+                    <Download size={17} /> Ekspor ke Excel
+                  </button>
                 </div>
-                <label className="flex items-center gap-2 text-sm font-bold text-[#4c6277]">
-                  Tahun
-                  <select className="rounded-lg border border-[#dde1e5] bg-white px-3 py-2 text-sm font-medium text-[#222c35]" onChange={(event) => setReportYear(event.target.value)} value={reportYear}>
-                    <option>Semua Tahun</option>
-                    {reportYears.map((year) => <option key={year}>{year}</option>)}
-                  </select>
-                </label>
+
+                {reportExportError && <p className="rounded-xl border border-[#f2c7bd] bg-[#fff1ed] px-4 py-3 text-sm font-semibold text-[#a74636]" role="alert">{reportExportError}</p>}
+
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {annualReportRows.length ? annualReportRows.map(([year, count]) => (
+                    <button className={`rounded-2xl border p-5 text-left shadow-[0_10px_22px_rgba(36,51,45,0.04)] transition hover:-translate-y-0.5 ${reportYear === year ? 'border-[#9bb8d3] bg-[#eaf1f7]' : 'border-[#dde1e5] bg-white hover:bg-[#f9fbfc]'}`} key={year} onClick={() => setReportYear(year)} type="button">
+                      <span className="text-sm font-bold text-[#4c6277]">{year}</span>
+                      <strong className="mt-3 block text-3xl font-extrabold tracking-[-0.04em] text-[#222c35]">{count}</strong>
+                      <span className="mt-1 block text-xs text-[#757c83]">peserta</span>
+                    </button>
+                  )) : (
+                    <div className="rounded-2xl border border-dashed border-[#c8d0d7] bg-white px-5 py-7 text-sm text-[#737a81] sm:col-span-2 xl:col-span-4">Belum ada data peserta magang.</div>
+                  )}
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-[#dde1e5] bg-white shadow-[0_10px_22px_rgba(36,51,45,0.04)]">
+                  <div className="flex flex-col gap-3 border-b border-[#eceef0] bg-[#f9fbfc] p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-lg font-extrabold text-[#222c35]">Data Peserta</h2>
+                      <p className="mt-1 text-xs text-[#757c83]">{reportedParticipants.length} peserta</p>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm font-bold text-[#4c6277]">
+                      Tahun
+                      <select className="rounded-lg border border-[#dde1e5] bg-white px-3 py-2 text-sm font-medium text-[#222c35]" onChange={(event) => setReportYear(event.target.value)} value={reportYear}>
+                        <option>Semua Tahun</option>
+                        {reportYears.map((year) => <option key={year}>{year}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[900px] border-collapse text-left">
+                      <thead className="bg-white text-xs font-bold uppercase tracking-[0.08em] text-[#75808a]">
+                        <tr>
+                          <th className="px-4 py-3">Nama</th><th className="px-4 py-3">Kode</th><th className="px-4 py-3">Institusi</th><th className="px-4 py-3">Jurusan / Divisi</th><th className="px-4 py-3">Periode Magang</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#eceef0]">
+                        {reportedParticipants.length ? reportedParticipants.map((participant) => (
+                          <tr className="text-sm text-[#556e86]" key={participant.id}>
+                            <td className="px-4 py-3 font-bold text-[#303e4c]">{participant.name || '-'}</td>
+                            <td className="px-4 py-3">{participant.participantCode || '-'}</td>
+                            <td className="px-4 py-3">{participant.institution || '-'}</td>
+                            <td className="px-4 py-3">{participant.major || '-'} / {participant.division || '-'}</td>
+                            <td className="whitespace-nowrap px-4 py-3">{participant.startDate || '-'} – {participant.endDate || '-'}</td>
+                          </tr>
+                        )) : (
+                          <tr><td className="px-4 py-10 text-center text-sm text-[#828991]" colSpan="5">Tidak ada peserta pada tahun ini.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] border-collapse text-left">
-                  <thead className="bg-white text-xs font-bold uppercase tracking-[0.08em] text-[#75808a]">
-                    <tr>
-                      <th className="px-4 py-3">Nama</th><th className="px-4 py-3">Kode</th><th className="px-4 py-3">Institusi</th><th className="px-4 py-3">Jurusan / Divisi</th><th className="px-4 py-3">Periode Magang</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#eceef0]">
-                    {reportedParticipants.length ? reportedParticipants.map((participant) => (
-                      <tr className="text-sm text-[#556e86]" key={participant.id}>
-                        <td className="px-4 py-3 font-bold text-[#303e4c]">{participant.name || '-'}</td>
-                        <td className="px-4 py-3">{participant.participantCode || '-'}</td>
-                        <td className="px-4 py-3">{participant.institution || '-'}</td>
-                        <td className="px-4 py-3">{participant.major || '-'} / {participant.division || '-'}</td>
-                        <td className="whitespace-nowrap px-4 py-3">{participant.startDate || '-'} – {participant.endDate || '-'}</td>
-                      </tr>
-                    )) : (
-                      <tr><td className="px-4 py-10 text-center text-sm text-[#828991]" colSpan="5">Tidak ada peserta pada tahun ini.</td></tr>
-                    )}
-                  </tbody>
-                </table>
+            )}
+
+            {/* ── Tab: Rekap Absensi ── */}
+            {reportsTab === 'attendance' && (
+              <div className="space-y-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 className="text-2xl font-extrabold tracking-[-0.04em] text-[#1f2830]">Rekap Absensi Bulanan</h2>
+                    <p className="mt-1 text-sm text-[#757c83]">Ringkasan status kehadiran seluruh peserta dalam satu bulan.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <select
+                      className="rounded-lg border border-[#dde1e5] bg-white px-3 py-2 text-sm font-medium text-[#222c35]"
+                      onChange={(e) => setRekapMonth(e.target.value)}
+                      value={rekapMonth}
+                    >
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <option key={i} value={String(i)}>
+                          {new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2000, i, 1))}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="rounded-lg border border-[#dde1e5] bg-white px-3 py-2 text-sm font-medium text-[#222c35]"
+                      onChange={(e) => setRekapYear(e.target.value)}
+                      value={rekapYear}
+                    >
+                      {availableYears.map((y) => <option key={y}>{y}</option>)}
+                    </select>
+                    <button
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#222c35] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#303e4c] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={monthlyAttendance.length === 0}
+                      onClick={() => {
+                        const monthName = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2000, Number(rekapMonth), 1))
+                        const weekdays = monthlyAttendance[0]?.weekdays || []
+                        const dowLabels = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
+
+                        // Sheet 1: Ringkasan
+                        const summaryHeader = ['Nama Peserta', 'Bagian', 'Hadir', 'Terlambat', 'Izin', 'Sakit', 'Tidak Hadir']
+                        const summaryRows = monthlyAttendance.map(({ participant, hadir, terlambat, izin, sakit, absen }) => [
+                          participant.name || '', participant.division || '', hadir, terlambat, izin, sakit, absen,
+                        ])
+
+                        // Sheet 2: Detail per tanggal
+                        const statusCode = { hadir: 'H', terlambat: 'T', izin: 'I', sakit: 'S' }
+                        const detailDateHeader = weekdays.map(({ day, dow }) => `${day}\n${dowLabels[dow]}`)
+                        const detailHeader = ['Nama Peserta', 'Bagian', ...detailDateHeader, 'Hadir', 'Terlambat', 'Izin', 'Sakit', 'Tidak Hadir']
+                        const detailRows = monthlyAttendance.map(({ participant, hadir, terlambat, izin, sakit, absen, dayMap }) => [
+                          participant.name || '',
+                          participant.division || '',
+                          ...weekdays.map(({ key }) => statusCode[dayMap[key]] || '-'),
+                          hadir, terlambat, izin, sakit, absen,
+                        ])
+
+                        const sheets = [
+                          {
+                            name: 'Ringkasan',
+                            rows: [
+                              [`Rekap Absensi — ${monthName} ${rekapYear}`],
+                              [],
+                              summaryHeader,
+                              ...summaryRows,
+                            ],
+                            columnWidths: [28, 24, 10, 12, 10, 10, 14],
+                          },
+                          {
+                            name: 'Detail per Tanggal',
+                            rows: [
+                              [`Detail Absensi Harian — ${monthName} ${rekapYear}`],
+                              [`Keterangan: H=Hadir  T=Terlambat  I=Izin  S=Sakit  -=Tidak Hadir`],
+                              [],
+                              detailHeader,
+                              ...detailRows,
+                            ],
+                            columnWidths: [28, 20, ...weekdays.map(() => 5), 8, 10, 8, 8, 12],
+                          },
+                        ]
+                        try {
+                          const workbook = createParticipantReportXlsx(sheets)
+                          const blob = new Blob([workbook], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+                          const url = URL.createObjectURL(blob)
+                          const link = document.createElement('a')
+                          link.href = url
+                          link.download = `rekap-absensi-${monthName.toLowerCase()}-${rekapYear}.xlsx`
+                          document.body.append(link)
+                          link.click()
+                          link.remove()
+                          window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+                        } catch {
+                          window.alert('Ekspor gagal. Periksa ruang penyimpanan browser.')
+                        }
+                      }}
+                      type="button"
+                    >
+                      <Download size={16} /> Ekspor ke Excel
+                    </button>
+                  </div>
+                </div>
+
+                {/* Ringkasan per peserta */}
+                <div className="overflow-hidden rounded-2xl border border-[#dde1e5] bg-white shadow-sm">
+                  <div className="border-b border-[#eceef0] px-4 py-3">
+                    <h3 className="font-extrabold text-[#222c35]">Ringkasan</h3>
+                    <p className="mt-0.5 text-xs text-[#838a91]">Total hari per status dalam bulan ini</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+                      <thead className="bg-[#f7f8f9] text-xs font-bold uppercase tracking-[0.08em] text-[#75808a]">
+                        <tr>
+                          <th className="px-4 py-3">Peserta</th>
+                          <th className="px-4 py-3 text-center text-[#286344]">Hadir</th>
+                          <th className="px-4 py-3 text-center text-[#a74636]">Terlambat</th>
+                          <th className="px-4 py-3 text-center text-[#2d4f70]">Izin</th>
+                          <th className="px-4 py-3 text-center text-[#8a4030]">Sakit</th>
+                          <th className="px-4 py-3 text-center text-[#555]">Tidak Hadir</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#eceef0]">
+                        {monthlyAttendance.length ? monthlyAttendance.map(({ participant, hadir, terlambat, izin, sakit, absen }) => (
+                          <tr className="hover:bg-[#f9fbfc]" key={getParticipantIdentifier(participant)}>
+                            <td className="px-4 py-3">
+                              <p className="font-bold text-[#303e4c]">{participant.name || '-'}</p>
+                              <p className="text-xs text-[#838a91]">{participant.division || '-'}</p>
+                            </td>
+                            <td className="px-4 py-3 text-center font-extrabold text-[#286344]">{hadir}</td>
+                            <td className="px-4 py-3 text-center font-extrabold text-[#a74636]">{terlambat}</td>
+                            <td className="px-4 py-3 text-center font-extrabold text-[#2d4f70]">{izin}</td>
+                            <td className="px-4 py-3 text-center font-extrabold text-[#8a4030]">{sakit}</td>
+                            <td className="px-4 py-3 text-center font-extrabold text-[#555]">{absen}</td>
+                          </tr>
+                        )) : (
+                          <tr><td className="px-4 py-8 text-center text-[#828991]" colSpan="6">Belum ada peserta terdaftar.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Detail per tanggal */}
+                {monthlyAttendance.length > 0 && monthlyAttendance[0].weekdays.length > 0 && (
+                  <div className="overflow-hidden rounded-2xl border border-[#dde1e5] bg-white shadow-sm">
+                    <div className="border-b border-[#eceef0] px-4 py-3">
+                      <h3 className="font-extrabold text-[#222c35]">Detail per Tanggal</h3>
+                      <div className="mt-1 flex flex-wrap gap-3 text-xs text-[#838a91]">
+                        {[
+                          { label: 'H', desc: 'Hadir', cls: 'bg-[#e7f3ed] text-[#286344]' },
+                          { label: 'T', desc: 'Terlambat', cls: 'bg-[#fff1ed] text-[#a74636]' },
+                          { label: 'I', desc: 'Izin', cls: 'bg-[#dbe7f3] text-[#2d4f70]' },
+                          { label: 'S', desc: 'Sakit', cls: 'bg-[#fce8e3] text-[#8a4030]' },
+                          { label: '—', desc: 'Tidak Hadir', cls: 'bg-[#f1f3f4] text-[#555]' },
+                        ].map(({ label, desc, cls }) => (
+                          <span className="flex items-center gap-1" key={label}>
+                            <span className={`inline-flex h-5 w-5 items-center justify-center rounded text-[10px] font-extrabold ${cls}`}>{label}</span>
+                            {desc}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="border-collapse text-xs">
+                        <thead className="bg-[#f7f8f9]">
+                          <tr>
+                            <th className="sticky left-0 z-10 min-w-[160px] border-r border-[#eceef0] bg-[#f7f8f9] px-4 py-3 text-left font-bold text-[#75808a]">
+                              Peserta
+                            </th>
+                            {monthlyAttendance[0].weekdays.map(({ day, key, dow }) => {
+                              const dowLabel = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][dow]
+                              return (
+                                <th className="min-w-[36px] border-r border-[#eceef0] px-1 py-2 text-center font-bold text-[#75808a]" key={key}>
+                                  <span className="block">{day}</span>
+                                  <span className="block text-[9px] font-normal text-[#aab0b6]">{dowLabel}</span>
+                                </th>
+                              )
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#eceef0]">
+                          {monthlyAttendance.map(({ participant, dayMap, weekdays: wds }) => (
+                            <tr className="hover:bg-[#f9fbfc]" key={getParticipantIdentifier(participant)}>
+                              <td className="sticky left-0 z-10 border-r border-[#eceef0] bg-white px-4 py-2.5 hover:bg-[#f9fbfc]">
+                                <p className="font-bold text-[#303e4c]">{participant.name || '-'}</p>
+                                <p className="text-[10px] text-[#838a91]">{participant.division || '-'}</p>
+                              </td>
+                              {wds.map(({ key }) => {
+                                const status = dayMap[key]
+                                const cellConfig = {
+                                  hadir: { label: 'H', cls: 'bg-[#e7f3ed] text-[#286344]' },
+                                  terlambat: { label: 'T', cls: 'bg-[#fff1ed] text-[#a74636]' },
+                                  izin: { label: 'I', cls: 'bg-[#dbe7f3] text-[#2d4f70]' },
+                                  sakit: { label: 'S', cls: 'bg-[#fce8e3] text-[#8a4030]' },
+                                }
+                                const cell = cellConfig[status]
+                                return (
+                                  <td className="border-r border-[#eceef0] px-1 py-2.5 text-center" key={key}>
+                                    {cell ? (
+                                      <span className={`inline-flex h-6 w-6 items-center justify-center rounded font-extrabold ${cell.cls}`}>
+                                        {cell.label}
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-[#f1f3f4] text-[10px] font-bold text-[#aab0b6]">—</span>
+                                    )}
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-xs text-[#838a91]">
+                  Hanya hari kerja (Senin–Jumat) yang ditampilkan. Data berdasarkan penyimpanan lokal browser ini.
+                </p>
               </div>
-            </div>
+            )}
           </div>
         )}
 
