@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Activity, Award, ArrowLeft, ArrowRight, BadgeCheck, Building2, CalendarClock, CalendarDays, ClipboardCheck, Clock3, Download, FileText, IdCard, LayoutDashboard, LogOut, Pencil, Search, Sparkles, TrendingUp, Users, X } from 'lucide-react'
+import { Activity, Award, ArrowLeft, ArrowRight, BadgeCheck, CalendarClock, CalendarDays, ClipboardCheck, Clock3, Download, FileText, IdCard, LayoutDashboard, LogOut, Pencil, Search, Sparkles, TrendingUp, Users, X } from 'lucide-react'
 import { CertificateDirectory } from './CertificateDirectory'
 import { CertificatePage } from './CertificatePage'
 import { isCertificateAvailable } from './certificateUtils'
@@ -33,6 +33,7 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
   const [reportsTab, setReportsTab] = useState('participants')
   const [rekapYear, setRekapYear] = useState(String(new Date().getFullYear()))
   const [rekapMonth, setRekapMonth] = useState(String(new Date().getMonth()))
+  const [selectedAttendanceParticipantId, setSelectedAttendanceParticipantId] = useState(null)
 
   useEffect(() => {
     const refreshAttendance = () => {
@@ -50,7 +51,6 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'participants', label: 'Data Peserta', icon: Users },
-    { id: 'institutions', label: 'Institusi & Program Studi', icon: Building2 },
     { id: 'certificates', label: 'Kelola Sertifikat', icon: Award },
     { id: 'id-card', label: 'Kelola ID Card', icon: IdCard },
     { id: 'attendance', label: 'Absensi', icon: ClipboardCheck },
@@ -243,6 +243,23 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
     })
   }, [participants, attendanceRecords, leaveRequests, rekapYear, rekapMonth])
 
+  const selectedAttendanceEntry = monthlyAttendance.find(({ participant }) => (
+    participant.id === selectedAttendanceParticipantId
+  )) || null
+
+  const openAttendanceDetail = (participant) => {
+    setSelectedAttendanceParticipantId(participant.id)
+  }
+
+  const openAttendanceDetailAndExport = (participant) => {
+    setSelectedAttendanceParticipantId(participant.id)
+    window.setTimeout(() => window.print(), 250)
+  }
+
+  const exportAttendancePdf = () => {
+    window.setTimeout(() => window.print(), 150)
+  }
+
   const uniquePeriods = useMemo(() => {
     const periods = participants
       .filter((participant) => participant.startDate || participant.endDate)
@@ -384,7 +401,7 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
   }
 
   return (
-    <section className="page-shell grid max-w-7xl gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
+    <section className="admin-glass page-shell grid max-w-7xl gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
       <aside className="h-fit rounded-2xl border border-[#dbdfe3] bg-white p-3 shadow-[0_12px_30px_rgba(36,51,45,0.05)]">
         <div className="mb-4 flex items-center justify-between px-3 pt-2 lg:block">
           <div>
@@ -1016,14 +1033,23 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
                         {monthlyAttendance.length ? monthlyAttendance.map(({ participant, hadir, terlambat, izin, sakit, absen }) => (
                           <tr className="hover:bg-[#f9fbfc]" key={getParticipantIdentifier(participant)}>
                             <td className="px-4 py-3">
-                              <p className="font-bold text-[#303e4c]">{participant.name || '-'}</p>
+                              <button className="text-left font-bold text-[#2f5a84] underline decoration-[#9bb8d3] underline-offset-4 hover:text-[#1f4268]" onClick={() => openAttendanceDetail(participant)} type="button">
+                                {participant.name || '-'}
+                              </button>
                               <p className="text-xs text-[#838a91]">{participant.division || '-'}</p>
                             </td>
                             <td className="px-4 py-3 text-center font-extrabold text-[#286344]">{hadir}</td>
                             <td className="px-4 py-3 text-center font-extrabold text-[#a74636]">{terlambat}</td>
                             <td className="px-4 py-3 text-center font-extrabold text-[#2d4f70]">{izin}</td>
                             <td className="px-4 py-3 text-center font-extrabold text-[#8a4030]">{sakit}</td>
-                            <td className="px-4 py-3 text-center font-extrabold text-[#555]">{absen}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="font-extrabold text-[#555]">{absen}</span>
+                                <button aria-label={`Ekspor PDF absensi ${participant.name}`} className="grid h-8 w-8 place-items-center rounded-lg border border-[#d6dde3] text-[#2f5a84] transition hover:bg-[#eaf1f7]" onClick={() => openAttendanceDetailAndExport(participant)} title="Ekspor PDF absensi peserta" type="button">
+                                  <Download size={15} />
+                                </button>
+                              </div>
+                            </td>
                           </tr>
                         )) : (
                           <tr><td className="px-4 py-8 text-center text-[#828991]" colSpan="6">Belum ada peserta terdaftar.</td></tr>
@@ -1075,7 +1101,9 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
                           {monthlyAttendance.map(({ participant, dayMap, weekdays: wds }) => (
                             <tr className="hover:bg-[#f9fbfc]" key={getParticipantIdentifier(participant)}>
                               <td className="sticky left-0 z-10 border-r border-[#eceef0] bg-white px-4 py-2.5 hover:bg-[#f9fbfc]">
-                                <p className="font-bold text-[#303e4c]">{participant.name || '-'}</p>
+                                <button className="text-left font-bold text-[#2f5a84] underline decoration-[#9bb8d3] underline-offset-4 hover:text-[#1f4268]" onClick={() => openAttendanceDetail(participant)} type="button">
+                                  {participant.name || '-'}
+                                </button>
                                 <p className="text-[10px] text-[#838a91]">{participant.division || '-'}</p>
                               </td>
                               {wds.map(({ key }) => {
@@ -1128,7 +1156,7 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
           )
         )}
 
-        {activeSection !== 'dashboard' && activeSection !== 'id-card' && activeSection !== 'certificates' && activeSection !== 'attendance' && !(activeSection === 'participants' || activeSection === 'institutions' || activeSection === 'reports') && (
+        {activeSection !== 'dashboard' && activeSection !== 'id-card' && activeSection !== 'certificates' && activeSection !== 'attendance' && !(activeSection === 'participants' || activeSection === 'reports') && (
           <div className="rounded-2xl border border-dashed border-[#c9d0d6] bg-white/70 px-6 py-20 text-center">
             <ActiveIcon className="mx-auto text-[#aaafb3]" size={32} />
             <h2 className="mt-4 text-lg font-extrabold text-[#384858]">Belum ada data {activeMenu.label.toLowerCase()}</h2>
@@ -1224,6 +1252,99 @@ export function AdminPage({ participants, onBack, onOpenParticipants, onUpdatePa
                   </div>
                 )}
               </aside>
+            </div>
+          </div>
+        )}
+
+        {selectedAttendanceEntry && (
+          <div className="attendance-detail-modal fixed inset-0 z-[70] flex items-center justify-center bg-[#1f2830]/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="attendance-detail-title">
+            <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-[#dfe3e7] bg-white shadow-[0_24px_70px_rgba(31,40,48,0.28)]">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#eceef0] bg-white px-5 py-4 print:static">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#6f879e]">Detail absensi peserta</p>
+                  <h2 className="mt-1 text-xl font-extrabold text-[#222c35]" id="attendance-detail-title">{selectedAttendanceEntry.participant.name || '-'}</h2>
+                </div>
+                <button aria-label="Tutup detail absensi" className="grid h-9 w-9 place-items-center rounded-lg text-[#737a81] transition hover:bg-[#edf1f4] print:hidden" onClick={() => setSelectedAttendanceParticipantId(null)} type="button"><X size={19} /></button>
+              </div>
+
+              <div className="p-5">
+                <div className="mb-5 grid gap-3 rounded-xl border border-[#e1e6ea] bg-[#f9fbfc] p-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div><p className="text-xs font-bold text-[#879096]">PERIODE</p><p className="mt-1 font-extrabold text-[#303e4c]">{new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2000, Number(rekapMonth), 1))} {rekapYear}</p></div>
+                  <div><p className="text-xs font-bold text-[#879096]">BAGIAN</p><p className="mt-1 font-extrabold text-[#303e4c]">{selectedAttendanceEntry.participant.division || '-'}</p></div>
+                  <div><p className="text-xs font-bold text-[#879096]">INSTITUSI</p><p className="mt-1 font-extrabold text-[#303e4c]">{selectedAttendanceEntry.participant.institution || '-'}</p></div>
+                  <div><p className="text-xs font-bold text-[#879096]">KODE PESERTA</p><p className="mt-1 font-mono font-extrabold text-[#2f5a84]">{selectedAttendanceEntry.participant.participantCode || '-'}</p></div>
+                </div>
+
+                <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                  {[
+                    ['Hadir', selectedAttendanceEntry.hadir, 'bg-[#e7f3ed] text-[#286344]'],
+                    ['Terlambat', selectedAttendanceEntry.terlambat, 'bg-[#fff1ed] text-[#a74636]'],
+                    ['Izin', selectedAttendanceEntry.izin, 'bg-[#dbe7f3] text-[#2d4f70]'],
+                    ['Sakit', selectedAttendanceEntry.sakit, 'bg-[#fce8e3] text-[#8a4030]'],
+                    ['Tidak Hadir', selectedAttendanceEntry.absen, 'bg-[#f1f3f4] text-[#555]'],
+                  ].map(([label, value, cls]) => (
+                    <div className={`rounded-xl px-3 py-3 ${cls}`} key={label}>
+                      <p className="text-xs font-bold">{label}</p>
+                      <p className="mt-1 text-2xl font-extrabold">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-[#e1e6ea]">
+                  <table className="w-full min-w-[720px] border-collapse text-sm">
+                    <thead className="bg-[#f7f8f9] text-xs font-bold uppercase tracking-[0.06em] text-[#75808a]">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Tanggal</th>
+                        <th className="px-4 py-3 text-left">Status</th>
+                        <th className="px-4 py-3 text-left">Jam Masuk</th>
+                        <th className="px-4 py-3 text-left">Jam Pulang</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#eceef0]">
+                      {selectedAttendanceEntry.weekdays.map(({ key, day, dow }) => {
+                        const status = selectedAttendanceEntry.dayMap[key]
+                        const participantRecords = attendanceRecords.filter((record) => (
+                          record.participantIdentifier === getParticipantIdentifier(selectedAttendanceEntry.participant)
+                          && record.date === key
+                        ))
+                        const checkIn = participantRecords.find((record) => record.type === 'check-in')
+                        const checkOut = participantRecords.find((record) => record.type === 'check-out')
+                        const formatTime = (record) => {
+                          if (!record?.scannedAt) return '-'
+                          const date = new Date(record.scannedAt)
+                          if (Number.isNaN(date.getTime())) return '-'
+                          return new Intl.DateTimeFormat('id-ID', {
+                            timeZone: 'Asia/Jakarta',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hourCycle: 'h23',
+                          }).format(date) + ' WIB'
+                        }
+                        const statusLabel = {
+                          hadir: 'Hadir',
+                          terlambat: 'Terlambat',
+                          izin: 'Izin',
+                          sakit: 'Sakit',
+                        }[status] || (key <= formatLocalDate(new Date()) ? 'Tidak Hadir' : 'Belum Lewat')
+                        const dowLabel = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][dow]
+                        return (
+                          <tr className="hover:bg-[#f9fbfc]" key={key}>
+                            <td className="px-4 py-3 font-bold text-[#303e4c]">{day} {dowLabel}</td>
+                            <td className="px-4 py-3 font-bold text-[#556e86]">{statusLabel}</td>
+                            <td className="px-4 py-3 text-[#556e86]">{formatTime(checkIn)}</td>
+                            <td className="px-4 py-3 text-[#556e86]">{formatTime(checkOut)}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 border-t border-[#eceef0] px-5 py-4 print:hidden">
+                <button className="rounded-xl border border-[#dde1e5] px-4 py-3 text-sm font-bold text-[#384858] transition hover:bg-[#f4f6f7]" onClick={() => setSelectedAttendanceParticipantId(null)} type="button">Tutup</button>
+                <button className="inline-flex items-center gap-2 rounded-xl bg-[#222c35] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#303e4c]" onClick={exportAttendancePdf} type="button"><Download size={16} /> Ekspor ke PDF</button>
+              </div>
             </div>
           </div>
         )}

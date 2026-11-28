@@ -1,5 +1,6 @@
-import { ArrowLeft, LogIn, ShieldCheck } from 'lucide-react'
+import { LogIn } from 'lucide-react'
 import { useState } from 'react'
+import { LoginVisual } from './LoginVisual'
 
 /**
  * Login form dipakai di area Admin dan area Absensi.
@@ -39,37 +40,17 @@ export function AdminLogin({
   }
 
   return (
-    <section className="page-shell flex max-w-md flex-col">
-      <button
-        className="mb-8 inline-flex items-center gap-2 self-start text-sm font-bold text-[#66798b] transition hover:text-[#20354a]"
-        onClick={onBack}
-        type="button"
-      >
-        <ArrowLeft size={16} /> Kembali
-      </button>
-
-      <div className="overflow-hidden rounded-[28px] border border-[#dce4eb] bg-white shadow-[0_22px_60px_rgba(27,56,82,0.10)]">
-        {/* Header — konsisten dengan ParticipantLogin */}
-        <div
-          className="px-6 py-7 text-white sm:px-8"
-          style={{ background: `linear-gradient(135deg, ${accentFrom}, ${accentTo})` }}
-        >
-          <div className="mb-5 flex items-center justify-between">
-            <img alt="Logo Pelindo" className="h-9 w-auto rounded-lg bg-white px-3 py-1.5 object-contain" src="/pelindo-logo.png" />
-            <span className="rounded-full border border-white/25 px-3 py-1 text-[11px] font-bold tracking-[0.12em]">PINTAR</span>
-          </div>
-          <div className="mb-3 flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-white/15">
-              <ShieldCheck size={16} />
-            </span>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">{eyebrow}</p>
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-[-0.04em]">{title}</h1>
-          <p className="mt-2 text-sm leading-6 text-white/80">{description}</p>
-        </div>
-
-        {/* Form */}
-        <form className="space-y-4 p-6 sm:p-8" onSubmit={handleSubmit}>
+    <LoginVisual
+      accentFrom={accentFrom}
+      accentTo={accentTo}
+      description={description}
+      eyebrow={eyebrow}
+      mode={eyebrow === 'Area Absensi' ? 'attendance' : 'admin'}
+      onBack={onBack}
+      title={title}
+    >
+      <form className="login-form" onSubmit={handleSubmit}>
+        <div className="login-fields">
           <label className="block text-sm font-bold text-[#344a5f]">
             Username
             <input
@@ -94,21 +75,16 @@ export function AdminLogin({
               value={password}
             />
           </label>
+        </div>
 
-          {error && (
-            <p className="rounded-xl bg-[#fff1ed] px-3 py-2.5 text-sm font-semibold text-[#a74636]" role="alert">
-              {error}
-            </p>
-          )}
+        {error && (
+          <p className="login-error" role="alert">{error}</p>
+        )}
 
-          <button
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#173f64] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#24567f]"
-            type="submit"
-          >
-            <LogIn size={17} /> {submitLabel}
-          </button>
-        </form>
-      </div>
-    </section>
+        <button className="login-submit" type="submit">
+          <LogIn size={17} /> {submitLabel}
+        </button>
+      </form>
+    </LoginVisual>
   )
 }

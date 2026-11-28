@@ -433,13 +433,13 @@ function App() {
   if (area === 'attendance') {
     return (
       <main className="min-h-screen overflow-hidden bg-[#f3f4f6] text-[#222c35]">
-        <header className={`${headerBase} ${headerScroll}`}>
-          <BrandMark />
-          <div className="flex items-center gap-3">
-            <span className="hidden items-center gap-1.5 rounded-full border border-[#c8d8e4] bg-[#e8f1f8] px-3 py-1.5 text-xs font-bold text-[#2f5a84] sm:inline-flex">
-              <ClipboardCheck size={13} /> Absensi
-            </span>
-            {attendanceAuthenticated && (
+        {(page !== 'attendance-login' && attendanceAuthenticated) && (
+          <header className={`${headerBase} ${headerScroll}`}>
+            <BrandMark />
+            <div className="flex items-center gap-3">
+              <span className="hidden items-center gap-1.5 rounded-full border border-[#c8d8e4] bg-[#e8f1f8] px-3 py-1.5 text-xs font-bold text-[#2f5a84] sm:inline-flex">
+                <ClipboardCheck size={13} /> Absensi
+              </span>
               <button
                 className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce4eb] bg-white px-3 py-2 text-xs font-bold text-[#556d84] transition hover:border-[#f8c4bb] hover:bg-[#fff5f3] hover:text-[#b34d3b]"
                 onClick={logoutAttendance}
@@ -447,9 +447,9 @@ function App() {
               >
                 <LogOut size={14} /> Keluar
               </button>
-            )}
-          </div>
-        </header>
+            </div>
+          </header>
+        )}
 
         {(page === 'attendance-login' || !attendanceAuthenticated) && (
           <AdminLogin
@@ -473,10 +473,10 @@ function App() {
           </section>
         )}
 
-        <footer className="mx-auto flex w-full max-w-7xl justify-between border-t border-[#dbdfe3] px-6 py-5 text-xs text-[#838a91] lg:px-10">
+        {page !== 'attendance-login' && attendanceAuthenticated && <footer className="mx-auto flex w-full max-w-7xl justify-between border-t border-[#dbdfe3] px-6 py-5 text-xs text-[#838a91] lg:px-10">
           <span>© 2024 Pelindo Internship</span>
           <span>Data kamu kami jaga.</span>
-        </footer>
+        </footer>}
       </main>
     )
   }
@@ -487,13 +487,13 @@ function App() {
   if (area === 'admin') {
     return (
       <main className="min-h-screen overflow-hidden bg-[#f3f4f6] text-[#222c35]">
-        <header className={`${headerBase} ${headerScroll}`}>
-          <BrandMark />
-          <div className="flex items-center gap-3">
-            <span className="hidden items-center gap-1.5 rounded-full border border-[#c8d8e4] bg-[#e8f1f8] px-3 py-1.5 text-xs font-bold text-[#2f5a84] sm:inline-flex">
-              <Users size={13} /> Admin
-            </span>
-            {adminAuthenticated && (
+        {(page !== 'admin-login' && adminAuthenticated) && (
+          <header className={`${headerBase} ${headerScroll}`}>
+            <BrandMark />
+            <div className="flex items-center gap-3">
+              <span className="hidden items-center gap-1.5 rounded-full border border-[#c8d8e4] bg-[#e8f1f8] px-3 py-1.5 text-xs font-bold text-[#2f5a84] sm:inline-flex">
+                <Users size={13} /> Admin
+              </span>
               <button
                 className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce4eb] bg-white px-3 py-2 text-xs font-bold text-[#556d84] transition hover:border-[#f8c4bb] hover:bg-[#fff5f3] hover:text-[#b34d3b]"
                 onClick={logoutAdmin}
@@ -501,9 +501,9 @@ function App() {
               >
                 <LogOut size={14} /> Keluar
               </button>
-            )}
-          </div>
-        </header>
+            </div>
+          </header>
+        )}
 
         {(page === 'admin-login' || !adminAuthenticated) && (
           <AdminLogin
@@ -560,10 +560,10 @@ function App() {
           />
         )}
 
-        <footer className="mx-auto flex w-full max-w-7xl justify-between border-t border-[#dbdfe3] px-6 py-5 text-xs text-[#838a91] lg:px-10">
+        {page !== 'admin-login' && adminAuthenticated && <footer className="mx-auto flex w-full max-w-7xl justify-between border-t border-[#dbdfe3] px-6 py-5 text-xs text-[#838a91] lg:px-10">
           <span>© 2024 Pelindo Internship</span>
           <span>Data kamu kami jaga.</span>
-        </footer>
+        </footer>}
       </main>
     )
   }
@@ -573,7 +573,7 @@ function App() {
   // ---------------------------------------------------------------------------
   return (
     <main className="min-h-screen overflow-hidden bg-[#f3f4f6] text-[#222c35]">
-      {/* Participant navbar — no Admin or Attendance links */}
+      {page !== 'participant-login' && (
       <header className={`${headerBase} ${headerScroll}`}>
         <BrandMark />
         <button
@@ -647,6 +647,7 @@ function App() {
           </button>
         </div>
       </header>
+      )}
 
       {/* ── Page content ── */}
       {page === 'welcome' && <LandingHome onStart={() => setPage('form')} participants={participants} />}
@@ -749,10 +750,10 @@ function App() {
         />
       )}
 
-      <footer className="mx-auto flex w-full max-w-7xl justify-between border-t border-[#dbdfe3] px-6 py-5 text-xs text-[#838a91] lg:px-10" id="kontak">
+      {page !== 'participant-login' && <footer className="mx-auto flex w-full max-w-7xl justify-between border-t border-[#dbdfe3] px-6 py-5 text-xs text-[#838a91] lg:px-10" id="kontak">
         <span>© 2024 Pelindo Internship</span>
         <span>Data kamu kami jaga.</span>
-      </footer>
+      </footer>}
     </main>
   )
 }
