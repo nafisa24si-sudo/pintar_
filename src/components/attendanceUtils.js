@@ -334,7 +334,5 @@ export function getParticipantDayStatus(participant, records, leaveRequests, dat
   const schedule = getAttendanceSchedule(date)
   if (!schedule) return 'non-working-day'
   if (dateKey < formatLocalDate(new Date())) return 'tidak-hadir'
-  const parts = getJakartaDateTimeParts(date)
-  if (Number(parts.hour) * 60 + Number(parts.minute) > schedule.startMinute) return 'terlambat'
   return 'belum-absen'
 }
