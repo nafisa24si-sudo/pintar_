@@ -50,6 +50,80 @@ button { cursor: pointer; }
 
 .dashboard-card { animation: dashboard-card-enter 420ms ease-out both; }
 
+.admin-area-shell {
+  background:
+    radial-gradient(circle at 88% 8%, rgba(84, 182, 235, 0.48), transparent 23rem),
+    radial-gradient(circle at 8% 78%, rgba(117, 96, 203, 0.27), transparent 26rem),
+    linear-gradient(145deg, #7db8de, #c7dcee 48%, #ae99d7);
+}
+
+.admin-area-header {
+  border-color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: 0 16px 40px rgba(48, 89, 128, 0.14);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.admin-participants-page {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: calc(100vh - 8rem);
+  overflow: hidden;
+  background: transparent;
+}
+
+.admin-participants-glass {
+  position: relative;
+  min-height: inherit;
+  background: transparent;
+}
+
+.admin-participants-filter,
+.admin-participants-count,
+.admin-participants-empty,
+.admin-participants-table {
+  border-color: rgba(255, 255, 255, 0.82) !important;
+  background: rgba(255, 255, 255, 0.54) !important;
+  box-shadow:
+    0 22px 46px rgba(54, 91, 128, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.admin-participants-glass > div[class*="border-dashed"] {
+  background: rgba(255, 255, 255, 0.38) !important;
+}
+
+.admin-participants-count {
+  background: rgba(218, 235, 247, 0.58) !important;
+}
+
+.admin-participants-glass input,
+.admin-participants-glass select {
+  border-color: rgba(255, 255, 255, 0.82) !important;
+  background: rgba(255, 255, 255, 0.48) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.admin-participants-glass .overflow-hidden > div[class*="border-b"],
+.admin-participants-glass .overflow-hidden > div[class*="bg-[#f9fbfc]"] {
+  border-color: rgba(255, 255, 255, 0.64);
+  background: rgba(239, 247, 252, 0.58);
+}
+
+.admin-participants-glass [role="dialog"] > form,
+.admin-participants-glass [role="dialog"] > div {
+  border-color: rgba(255, 255, 255, 0.88);
+  background: rgba(244, 249, 252, 0.82) !important;
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+
 .login-screen {
   position: relative;
   min-height: calc(100vh - 110px);

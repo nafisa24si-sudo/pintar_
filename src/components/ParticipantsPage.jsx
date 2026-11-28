@@ -64,7 +64,8 @@ export function ParticipantsPage({ participants, onBack, onAdd, onSelect, onView
   }
 
   return (
-    <section className="page-shell max-w-5xl">
+    <div className="admin-participants-page">
+      <section className="admin-participants-glass page-shell max-w-5xl">
       <button className="mb-8 inline-flex items-center gap-2 text-sm font-bold text-[#737a81] transition hover:text-[#222c35]" onClick={onBack} type="button">
         <ArrowLeft size={16} /> Kembali ke beranda
       </button>
@@ -77,7 +78,7 @@ export function ParticipantsPage({ participants, onBack, onAdd, onSelect, onView
         <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#222c35] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#303e4c]" onClick={onAdd} type="button"><Plus size={17} /> Tambah peserta</button>
       </div>
 
-      <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-[#dde1e5] bg-white p-3 shadow-[0_10px_24px_rgba(36,51,45,0.04)] sm:flex-row">
+      <div className="admin-participants-filter mb-5 flex flex-col gap-3 rounded-2xl border border-[#dde1e5] bg-white p-3 shadow-[0_10px_24px_rgba(36,51,45,0.04)] sm:flex-row">
         <label className="relative min-w-0 flex-1">
           <span className="sr-only">Cari peserta</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#989ea4]" size={17} />
@@ -101,19 +102,19 @@ export function ParticipantsPage({ participants, onBack, onAdd, onSelect, onView
         </label>
       </div>
 
-      <div className="mb-6 flex items-center gap-3 rounded-xl border border-[#c7d5e3] bg-[#dbe7f3] px-4 py-3 text-sm font-bold text-[#2d4f70]">
+      <div className="admin-participants-count mb-6 flex items-center gap-3 rounded-xl border border-[#c7d5e3] bg-[#dbe7f3] px-4 py-3 text-sm font-bold text-[#2d4f70]">
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#659fd8] text-[#28343f]">{filteredParticipants.length}</span>
         {filteredParticipants.length === participants.length ? 'Total peserta terdata' : 'Peserta sesuai filter'}
       </div>
 
       {participants.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#c9d0d6] bg-white/60 px-6 py-16 text-center">
+        <div className="admin-participants-empty rounded-2xl border border-dashed border-[#c9d0d6] bg-white/60 px-6 py-16 text-center">
           <UserRound className="mx-auto text-[#aaafb3]" size={36} />
           <h2 className="mt-4 text-lg font-extrabold text-[#384858]">Belum ada peserta</h2>
           <p className="mt-2 text-sm text-[#838a91]">Data yang dikirim melalui form akan muncul di sini.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-[#dfe3e7] bg-white shadow-[0_18px_50px_rgba(51,70,58,0.06)]">
+        <div className="admin-participants-table overflow-hidden rounded-2xl border border-[#dfe3e7] bg-white shadow-[0_18px_50px_rgba(51,70,58,0.06)]">
           <div className="hidden grid-cols-[1.1fr_1fr_0.8fr_1fr_1fr_90px] gap-4 border-b border-[#eceef0] bg-[#f9fbfc] px-5 py-3 text-xs font-bold uppercase tracking-[0.1em] text-[#899096] sm:grid">
             <span>Nama peserta</span><span>Institusi</span><span>Divisi</span><span>Periode magang</span><span>ID peserta</span><span>Aksi</span>
           </div>
@@ -142,7 +143,7 @@ export function ParticipantsPage({ participants, onBack, onAdd, onSelect, onView
 
       {editingParticipant && editData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f2830]/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="edit-participant-title">
-          <form className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#dfe3e7] bg-white shadow-[0_24px_70px_rgba(31,40,48,0.24)]" onSubmit={saveEdit}>
+          <form className="admin-participants-modal max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#dfe3e7] bg-white shadow-[0_24px_70px_rgba(31,40,48,0.24)]" onSubmit={saveEdit}>
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#eceef0] bg-white px-5 py-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#6f879e]">Edit data peserta</p>
@@ -187,6 +188,7 @@ export function ParticipantsPage({ participants, onBack, onAdd, onSelect, onView
           </form>
         </div>
       )}
-    </section>
+      </section>
+    </div>
   )
 }

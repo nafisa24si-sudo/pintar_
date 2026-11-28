@@ -486,9 +486,9 @@ function App() {
   // ---------------------------------------------------------------------------
   if (area === 'admin') {
     return (
-      <main className="min-h-screen overflow-hidden bg-[#f3f4f6] text-[#222c35]">
+      <main className={`min-h-screen overflow-hidden text-[#222c35] ${adminAuthenticated ? 'admin-area-shell' : 'bg-[#f3f4f6]'}`}>
         {(page !== 'admin-login' && adminAuthenticated) && (
-          <header className={`${headerBase} ${headerScroll}`}>
+          <header className={`${headerBase} admin-area-header`}>
             <BrandMark />
             <div className="flex items-center gap-3">
               <span className="hidden items-center gap-1.5 rounded-full border border-[#c8d8e4] bg-[#e8f1f8] px-3 py-1.5 text-xs font-bold text-[#2f5a84] sm:inline-flex">
